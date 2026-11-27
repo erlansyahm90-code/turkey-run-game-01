@@ -40,6 +40,27 @@
   #hud-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
   #hud-score { font-size: clamp(15px, 2.4vw, 24px); color: #ffd98a; }
   #hud-lives { font-size: clamp(15px, 2.4vw, 24px); color: #ff8f7a; letter-spacing: 0.12em; }
+  .hud-center { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  #hud-stamina {
+    display: flex; align-items: center; gap: 7px;
+    background: rgba(28, 13, 4, 0.72); border: 2px solid rgba(255, 214, 150, 0.55);
+    border-radius: 10px; padding: 4px 10px;
+  }
+  #hud-stamina .stamina-label {
+    font-size: 11px; font-weight: 900; letter-spacing: 0.14em; color: #ffe9c4;
+    text-shadow: 0 2px 3px rgba(0,0,0,0.6);
+  }
+  #hud-stamina-track { width: 110px; height: 9px; border-radius: 5px; background: rgba(20, 10, 3, 0.85); overflow: hidden; }
+  #hud-stamina-fill {
+    height: 100%; width: 100%;
+    background: linear-gradient(90deg, var(--leaf), var(--gold));
+    transition: width 0.1s linear;
+  }
+  #hud-stamina.ready #hud-stamina-fill {
+    background: linear-gradient(90deg, var(--gold), var(--accent));
+    box-shadow: 0 0 9px 2px rgba(242, 160, 7, 0.8);
+  }
+  #hud-stamina.active #hud-stamina-fill { background: #fff3d6; }
   #hud-dist { font-size: clamp(13px, 2vw, 19px); color: #ffe9c4; text-align: right; }
   #hud-progress-wrap { margin: 10px auto 0; max-width: 560px; }
   #hud-progress-label {
@@ -145,7 +166,10 @@
 <div id="hud">
   <div id="hud-top">
     <div class="hud-chip" id="hud-score">SCORE 0</div>
-    <div class="hud-chip" id="hud-lives">♥♥♥</div>
+    <div class="hud-center">
+      <div class="hud-chip" id="hud-lives">♥♥♥</div>
+      <div id="hud-stamina"><span class="stamina-label">DASH</span><div id="hud-stamina-track"><div id="hud-stamina-fill"></div></div></div>
+    </div>
     <div class="hud-chip" id="hud-dist">0 m</div>
   </div>
   <div id="hud-progress-wrap">
@@ -167,8 +191,10 @@
       The carving knife, the farmer's hand and the kitchen cat all want you back on a plate.</p>
     <button class="big-btn" id="start-btn">▶&nbsp; START THE DASH</button>
     <div class="controls">
-      <b>◀</b><b>▶</b> or <b>A</b><b>D</b> steer &nbsp;·&nbsp; <b>SPACE</b> / <b>▲</b> jump &nbsp;·&nbsp; mouse steers, click jumps<br>
-      Dodge the knife's shadow · jump the fork · spills slow you down · grab corn for points
+      <b>◀</b><b>▶</b> or <b>A</b><b>D</b> steer &nbsp;·&nbsp; <b>SPACE</b> / <b>▲</b> jump &nbsp;·&nbsp; <b>SHIFT</b> / <b>▼</b> dash<br>
+      mouse steers, click jumps, right-click dashes · double-tap <b>▲</b> dashes too<br>
+      Dodge the knife's shadow · jump the fork · spills slow you down · grab corn for points<br>
+      A dash is speed, not armour — the knife still lands. Chain a dash past it for CLOSE! points
     </div>
   </div>
 </div>

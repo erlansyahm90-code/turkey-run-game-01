@@ -7,7 +7,7 @@
 // in their own module; this file conducts them.
 
 import * as THREE from 'three';
-import { TURKEY, SCORING, HAZARDS, CAMERA, LEVELS } from './config.js';
+import { TURKEY, SCORING, HAZARDS, CAMERA, LEVELS, DASH } from './config.js';
 import { makeRandom, randomSeed } from './random.js';
 import { initAudio, sfx } from './audio.js';
 import { initInput, steerInput, takePresses } from './input.js';
@@ -90,6 +90,62 @@ const cloche = buildCloche();
 scene.add(cloche);
 const hazards = new Hazards(scene, random);
 
+// Feather burst: a puff of loose feathers kicked up behind the turkey when it dashes —
+// a small pool of tumbling feather cards, spawned at dash start and trailed while it lasts.
+const featherBursts = [];
+{
+  const geo = new THREE.BoxGeometry(0.36, 0.05, 0.62);
+  const matTip = new THREE.MeshStandardMaterial({ color: 0xe8dcc4, roughness: 0.85 });
+  const matDark = new THREE.MeshStandardMaterial({ color: 0x4e2c14, roughness: 0.9 });
+  for (let i = 0; i < 3; i++) {
+    const group = new THREE.Group();
+    const bits = [];
+    for (let j = 0; j < 8; j++) {
+      const m = new THREE.Mesh(geo, j % 2 ? matTip : matDark);
+      group.add(m);
+      bits.push({ mesh: m, vx: 0, vy: 0, vz: 0, spin: 0 });
+    }
+    group.visible = false;
+    scene.add(group);
+    featherBursts.push({ group, bits, t: 0, active: false });
+  }
+}
+
+function spawnFeatherBurst() {
+  const b = featherBursts.find((b2) => !b2.active);
+  if (!b) return;
+  const pos = turkeyPos();
+  b.t = 0;
+  b.active = true;
+  b.group.visible = true;
+  b.group.position.set(pos.x, pos.y + 1.1, pos.z + 1.2);
+  for (const bit of b.bits) {
+    bit.mesh.position.set((Math.random() - 0.5) * 0.9, (Math.random() - 0.5) * 0.7, (Math.random() - 0.5) * 0.9);
+    bit.mesh.scale.setScalar(1);
+    bit.vx = (Math.random() - 0.5) * 3.2;
+    bit.vy = 1.6 + Math.random() * 2.6;
+    bit.vz = 3 + Math.random() * 4.5; // drift backward, behind the running bird
+    bit.spin = (Math.random() - 0.5) * 11;
+  }
+}
+
+function updateFeatherFx(dt) {
+  for (const b of featherBursts) {
+    if (!b.active) continue;
+    b.t += dt;
+    if (b.t > 0.6) { b.active = false; b.group.visible = false; continue; }
+    for (const bit of b.bits) {
+      bit.mesh.position.x += bit.vx * dt;
+      bit.mesh.position.y += bit.vy * dt;
+      bit.mesh.position.z += bit.vz * dt;
+      bit.vy -= 6.5 * dt;
+      bit.mesh.rotation.x += bit.spin * dt;
+      bit.mesh.rotation.z += bit.spin * 0.7 * dt;
+      bit.mesh.scale.setScalar(Math.max(0.15, 1 - b.t / 0.6));
+    }
+  }
+}
+
 const FARMER_SPOTS = [
   (fz) => ({ x: 10, y: 0, z: fz - 52, s: 1 }),     // behind the oven, end of the table
   (fz) => ({ x: 16, y: 0, z: fz - 20, s: 1 }),     // standing on the kitchen floor
@@ -116,6 +172,10 @@ const game = {
   slowUntil: -1,
   invulnUntil: -1,
   stumbleUntil: -1,
+  stamina: DASH.staminaMax,
+  dashUntil: -1,
+  dashTrailT: 0,
+  dashHintShown: false,
   shake: 0,
   clocheT: 0,
   clocheRang: false,
@@ -188,6 +248,9 @@ function startLevel(i) {
   game.slowUntil = -1;
   game.invulnUntil = -1;
   game.stumbleUntil = -1;
+  game.stamina = DASH.staminaMax;
+  game.dashUntil = -1;
+  game.dashTrailT = 0;
   game.shake = 0;
   game.paused = false;
   game.clocheRang = false;
@@ -205,6 +268,7 @@ function resetRun() {
   game.corn = 0;
   game.nearMisses = 0;
   game.totalDistance = 0;
+  game.dashHintShown = false;
   startLevel(0);
 }
 
@@ -288,21 +352,56 @@ function handleEvents(events) {
   }
 }
 
+/** Start a dash if the stamina bar can pay for it. Speed only — never armour:
+ *  every hazard keeps checking the turkey's position exactly as before. */
+function tryDash() {
+  if (game.time < game.dashUntil) return;
+  if (game.stamina < DASH.staminaCost) return;
+  game.stamina -= DASH.staminaCost;
+  game.dashUntil = game.time + DASH.durationSecs;
+  game.dashTrailT = 0;
+  sfx.dash();
+  spawnFeatherBurst();
+}
+
 function updatePlaying(dt) {
   const level = game.level;
+  const presses = takePresses();
+  if (presses.has('dash')) tryDash();
+  const dashing = game.time < game.dashUntil;
+
   const f = Math.min(1, game.distance / level.length);
   let speed = TURKEY.baseSpeed + (TURKEY.topSpeed - TURKEY.baseSpeed) * f;
   if (game.time < game.slowUntil) speed *= HAZARDS.gravySlowFactor;
+  if (dashing) speed *= DASH.speedFactor;
   game.distance += speed * dt;
   game.score += SCORING.perMetre * speed * dt;
   game.runPhase += dt * speed * 1.5;
+
+  if (!dashing) {
+    game.stamina = Math.min(DASH.staminaMax, game.stamina + (DASH.staminaMax / DASH.refillSecs) * dt);
+  } else {
+    game.dashTrailT += dt;
+    if (game.dashTrailT > 0.3) { game.dashTrailT = 0; spawnFeatherBurst(); }
+  }
+  updateFeatherFx(dt);
+
+  // The FOV blooms a little while the dash burns, easing back as it ends.
+  const kick = dashing ? DASH.fovKick * Math.max(0, (game.dashUntil - game.time) / DASH.durationSecs) : 0;
+  camera.fov += (CAMERA.fov + kick - camera.fov) * Math.min(1, dt * 9);
+  camera.updateProjectionMatrix();
+
+  // One-time discovery hint, early in Level 1 while the bar sits full.
+  if (!game.dashHintShown && game.levelIndex === 0 && game.distance > 10) {
+    game.dashHintShown = true;
+    game.hud.flash('SHIFT — DASH!');
+  }
 
   const steer = steerInput();
   game.steerVis += (steer - game.steerVis) * Math.min(1, dt * 10);
   game.turkeyX = THREE.MathUtils.clamp(
     game.turkeyX + steer * TURKEY.steerSpeed * dt, -level.laneHalf, level.laneHalf);
 
-  const presses = takePresses();
   if (presses.has('jump') && game.turkeyY <= 0) {
     game.vy = TURKEY.jumpVelocity;
     sfx.jump();
@@ -334,7 +433,8 @@ function updatePlaying(dt) {
     if (game.levelIndex >= LEVELS.length - 1) startLeap();
     else completeLevel();
   }
-  game.hud.update(Math.floor(game.score), game.lives, game.distance);
+  game.hud.update(Math.floor(game.score), game.lives, game.distance,
+    game.stamina / DASH.staminaMax, dashing);
 }
 
 function updateCamera(dt) {

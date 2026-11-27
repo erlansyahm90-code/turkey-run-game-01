@@ -21,6 +21,15 @@ export const TURKEY = {
   invulnerableSecs: 1.6,
 };
 
+export const DASH = {
+  speedFactor: 1.6,     // forward speed multiplier while dashing
+  durationSecs: 0.9,    // one dash lasts this long
+  staminaMax: 100,
+  staminaCost: 100,     // a dash empties the stamina bar…
+  refillSecs: 4,        // …which refills over this much normal running
+  fovKick: 7,           // degrees of FOV that bloom in at dash start, easing back as it ends
+};
+
 export const SCORING = {
   perMetre: 2,
   cornKernel: 25,

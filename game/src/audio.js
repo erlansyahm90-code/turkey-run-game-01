@@ -63,6 +63,11 @@ export const sfx = {
   jump() {
     tone({ freq: 500, freqEnd: 980, type: 'square', dur: 0.14, vol: 0.14 });
   },
+  dash() {
+    // A rush of feathers: a fast rising noise sweep under a soft whoop.
+    noise({ dur: 0.3, vol: 0.26, low: 800, high: 3400 });
+    tone({ freq: 300, freqEnd: 720, type: 'sine', dur: 0.22, vol: 0.12 });
+  },
   corn() {
     tone({ freq: 1180, type: 'sine', dur: 0.07, vol: 0.2 });
     tone({ freq: 1560, type: 'sine', dur: 0.1, vol: 0.16, delay: 0.05 });

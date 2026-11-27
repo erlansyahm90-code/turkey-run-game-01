@@ -12,6 +12,8 @@ export class Hud {
     this.hud = el('hud');
     this.score = el('hud-score');
     this.lives = el('hud-lives');
+    this.staminaBox = el('hud-stamina');
+    this.staminaFill = el('hud-stamina-fill');
     this.dist = el('hud-dist');
     this.fill = el('hud-progress-fill');
     this.progressLeft = el('hud-progress-left');
@@ -90,9 +92,14 @@ export class Hud {
       `FINAL SCORE <span>${stats.score}</span>`;
   }
 
-  update(score, lives, distance) {
+  update(score, lives, distance, stamina01 = 1, dashing = false) {
     this.score.textContent = 'SCORE ' + score;
     this.lives.textContent = '♥'.repeat(Math.max(0, lives)) + '♡'.repeat(Math.max(0, TURKEY.lives - lives));
+    if (this.staminaFill) {
+      this.staminaFill.style.width = (Math.max(0, Math.min(1, stamina01)) * 100).toFixed(0) + '%';
+      this.staminaBox.classList.toggle('ready', stamina01 >= 1);
+      this.staminaBox.classList.toggle('active', dashing);
+    }
     this.dist.textContent = Math.floor(distance) + ' m';
     const f = Math.max(0, Math.min(1, distance / this.levelLength));
     this.fill.style.width = (f * 100).toFixed(1) + '%';

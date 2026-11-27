@@ -1,16 +1,20 @@
 // Dinner Table Dash — input. Keyboard and mouse, held state plus one-shot presses.
-// Arrows / WASD steer and jump; the mouse steers by its position across the window and a
-// click jumps. Enter and clicks also drive the title and end screens (wired in main.js).
+// Arrows / WASD steer and jump; SHIFT, S or ArrowDown dash (a double-tap of W / ArrowUp
+// dashes too); the mouse steers by its position across the window, a click jumps and a
+// right-click dashes (a two-finger touch dashes). Enter and clicks also drive the title
+// and end screens (wired in main.js).
 
 const held = new Set();
 const pressed = new Set();
 let mouseX = null;      // -1..1 across the window, or null when the mouse has not moved
 let mouseJump = false;
+let lastJumpKeyAt = -1e9; // for the double-tap-W dash: when W / ArrowUp was last freshly pressed
 
 const KEYMAP = {
   ArrowLeft: 'left', KeyA: 'left',
   ArrowRight: 'right', KeyD: 'right',
   ArrowUp: 'jump', KeyW: 'jump', Space: 'jump',
+  ShiftLeft: 'dash', ShiftRight: 'dash', ArrowDown: 'dash', KeyS: 'dash',
   Enter: 'confirm',
   KeyP: 'pause', Escape: 'pause',
 };
@@ -19,8 +23,17 @@ export function initInput(canvas) {
   window.addEventListener('keydown', (e) => {
     const action = KEYMAP[e.code];
     if (!action) return;
-    if (action === 'left' || action === 'right' || action === 'jump') e.preventDefault();
-    if (!held.has(action)) pressed.add(action);
+    if (action === 'left' || action === 'right' || action === 'jump' || action === 'dash') e.preventDefault();
+    if (!held.has(action)) {
+      pressed.add(action);
+      // Double-tap W / ArrowUp: a second fresh jump-key press within 0.5 s also dashes
+      // (the Windows double-click standard — generous enough for slow devices too).
+      if (action === 'jump' && (e.code === 'KeyW' || e.code === 'ArrowUp')) {
+        const now = performance.now();
+        if (now - lastJumpKeyAt < 500) pressed.add('dash');
+        lastJumpKeyAt = now;
+      }
+    }
     held.add(action);
   });
   window.addEventListener('keyup', (e) => {
@@ -31,10 +44,15 @@ export function initInput(canvas) {
   window.addEventListener('mousemove', (e) => {
     mouseX = (e.clientX / window.innerWidth) * 2 - 1;
   });
-  canvas.addEventListener('mousedown', () => { mouseJump = true; pressed.add('jump'); });
+  canvas.addEventListener('mousedown', (e) => {
+    if (e.button === 2) { pressed.add('dash'); return; }
+    mouseJump = true; pressed.add('jump');
+  });
+  canvas.addEventListener('contextmenu', (e) => { e.preventDefault(); pressed.add('dash'); });
   canvas.addEventListener('touchstart', (e) => {
     const t = e.touches[0];
     if (t) mouseX = (t.clientX / window.innerWidth) * 2 - 1;
+    if (e.touches.length >= 2) { pressed.add('dash'); return; }
     mouseJump = true;
     pressed.add('jump');
   }, { passive: true });
