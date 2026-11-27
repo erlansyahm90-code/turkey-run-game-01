@@ -27,10 +27,10 @@ export function stageShot(name, game) {
     // to the bird's rear-left so the body reads in three-quarter profile instead
     // of hiding behind its own tail fan, the turkey MID-DASH (stamina bar
     // mid-drain, feather burst blooming at its tail), the carving knife plunging
-    // one body-length to its left over a deep shadow, the farmer's fingers
-    // sweeping in at the frame's right edge, and the real HUD over it all with a
-    // CLOSE! +15 pop still on screen. A genuine gameplay frame, UI and all —
-    // not a cinematic.
+    // one body-length to its left over a deep shadow, the farmer's hand
+    // descending whole into the frame's top right, palm and fingers clear,
+    // and the real HUD over it all with a CLOSE! +15 pop still on screen.
+    // A genuine gameplay frame, UI and all — not a cinematic.
     game.setWorld(0);
     game.state = 'playing';
     game.hud.showHud();
@@ -41,6 +41,18 @@ export function stageShot(name, game) {
     game.turkeyX = -1.6;
     game.turkeyY = 0;
     turkey.group.position.set(-1.6, 0, -134);
+    // Tuck the wings into the flanks for the still: hanging at full size, the
+    // near wing's dark panel clears the body's curved surface and cuts the
+    // silhouette like a slab in front of the bird. Pulled in, shrunk a touch
+    // and swept back (pivot position/scale and rotation.x — animateTurkey
+    // only drives the pivots' rotation.z, so this pose survives the still's
+    // pose pass) the panel sinks into the flank and reads as the folded
+    // wing's shading on one clean round body.
+    for (const w of turkey.wings) {
+      w.pivot.rotation.x = -0.5;
+      w.pivot.position.x = w.side * 0.72;
+      w.pivot.scale.setScalar(0.8);
+    }
     game.stamina = 45;
     game.dashUntil = 999; // mid-dash: the stamina bar renders in its dashing state
     game.distance = 126.5; // burst origin a step behind the bird, so feathers read
@@ -76,16 +88,18 @@ export function stageShot(name, game) {
     knife.blob.visible = true;
     knife.ring.position.set(-4.6, 0.26, -137.2);
     knife.ring.visible = true;
-    // The farmer's hand swoops in from the top right, pitched down so the
-    // camera sees the palm's underside and the fingers curling down toward
-    // the bird — a grabbing hand, not the edge-on stack of boards the old
-    // cloth-height, level placement rendered as. The cuff exits the frame's
-    // top right corner; the bird keeps the centre.
+    // The farmer's hand descends whole into the top right of the frame:
+    // pitched steeply (rotation.x ≈ -1.15) so its fingers point down at the
+    // bird and the camera sees the palm's underside with the fingers spread
+    // and curling — the whole palm and all four fingers inside the frame,
+    // only the cuff/forearm leaving by the top edge. (At the old placement,
+    // far right and nearly level, the frame's edge cropped it into a stack
+    // of abstract blocks.) The bird keeps the centre.
     const hand = hazards.hand;
-    hand.group.position.set(17.0, 9.2, -136.5);
-    hand.group.rotation.set(-0.85, 0.9, 0.15);
+    hand.group.position.set(14.2, 12.6, -143.5);
+    hand.group.rotation.set(-1.15, 0.35, -0.15);
     hand.group.visible = true;
-    setGrab(hand, 0.85);
+    setGrab(hand, 0.5);
     let placed = 0;
     for (const c of hazards.corns) {
       if (placed >= 5) break;
