@@ -23,12 +23,14 @@ export function stageShot(name, game) {
 
   if (name === 'play') {
     // The hero frame (Level 1), staged to read in one second at thumbnail size —
-    // "I am small, death is huge, I just dodged it": camera low and tight, the
-    // turkey MID-DASH (stamina bar mid-drain, feather burst blooming), the carving
-    // knife plunging one body-length to its left over a deep shadow, the farmer's
-    // thumb and forefinger pinching the cloth at the frame's right edge, and the
-    // real HUD over it all with a CLOSE! +15 pop still on screen. A genuine
-    // gameplay frame, UI and all — not a cinematic.
+    // "I am small, death is huge, I just dodged it": camera low, tight and swung
+    // to the bird's rear-left so the body reads in three-quarter profile instead
+    // of hiding behind its own tail fan, the turkey MID-DASH (stamina bar
+    // mid-drain, feather burst blooming at its tail), the carving knife plunging
+    // one body-length to its left over a deep shadow, the farmer's fingers
+    // sweeping in at the frame's right edge, and the real HUD over it all with a
+    // CLOSE! +15 pop still on screen. A genuine gameplay frame, UI and all —
+    // not a cinematic.
     game.setWorld(0);
     game.state = 'playing';
     game.hud.showHud();
@@ -45,35 +47,45 @@ export function stageShot(name, game) {
     game.spawnDashFx();
     game.spawnDashFx();
     game.distance = 128;
-    // Pose the bursts mid-bloom: where the live effect puts the feathers ~0.3 s in.
+    // Pose the bursts as a puff kicked up at the tail: pull each burst back to
+    // the tail feathers, advance the bits only ~0.18 s along their drift and
+    // keep them at natural scale with a slight tumble — at the old 1.7 scale,
+    // floated in front of the bird, the flat feather cards clumped into a
+    // stack of boards that hid the turkey.
     for (const b of game.dashFx) {
       if (!b.active) continue;
+      b.group.position.z -= 1.6;
       for (const bit of b.bits) {
-        bit.mesh.position.x += bit.vx * 0.3;
-        bit.mesh.position.y += bit.vy * 0.3;
-        bit.mesh.position.z += bit.vz * 0.3;
-        bit.mesh.scale.setScalar(1.7);
+        bit.mesh.position.x += bit.vx * 0.18;
+        bit.mesh.position.y += bit.vy * 0.18;
+        bit.mesh.position.z += bit.vz * 0.38;
+        bit.mesh.rotation.x = bit.spin * 0.3;
+        bit.mesh.rotation.y = bit.spin * 0.2;
+        bit.mesh.scale.setScalar(1.0);
       }
     }
     const knife = hazards.knives[0];
     knife.phase = 'plunge';
-    knife.x = -5.4; knife.z = -139.5;
-    knife.group.position.set(-5.4, 14.2, -139.5);
+    knife.x = -4.7; knife.z = -137.2;
+    knife.group.position.set(-4.7, 12.4, -137.2);
     knife.group.rotation.y = 0.45;
     knife.group.rotation.z = 0.05;
     knife.group.visible = true;
-    knife.blob.position.set(-5.4, 0.24, -139.5);
+    knife.blob.position.set(-4.6, 0.24, -137.2);
     knife.blob.scale.setScalar(1);
     knife.blob.visible = true;
-    knife.ring.position.set(-5.4, 0.26, -139.5);
+    knife.ring.position.set(-4.6, 0.26, -137.2);
     knife.ring.visible = true;
-    // The farmer's hand intrudes at the right edge, thumb and forefinger pinching —
-    // side-on, so the fingers read in profile, curling down at the cloth.
+    // The farmer's hand sweeps in at the right edge at cloth height — palm out
+    // of frame, fingers descending at the edge with the grab curl on, tips
+    // staggered like fingertips. (Centred and seen from above, the hand's flat
+    // faces filled half the frame as a wall of boards; at the edge it reads
+    // as what it is and leaves the bird alone.)
     const hand = hazards.hand;
-    hand.group.position.set(9.4, 5.4, -131);
-    hand.group.rotation.set(0.2, 1.35, 0.1);
+    hand.group.position.set(16.0, 3.4, -130.5);
+    hand.group.rotation.set(0.05, 1.5, 0.0);
     hand.group.visible = true;
-    setGrab(hand, 0.62);
+    setGrab(hand, 0.75);
     let placed = 0;
     for (const c of hazards.corns) {
       if (placed >= 5) break;
@@ -97,8 +109,8 @@ export function stageShot(name, game) {
     // The farmer looms in the back so the pursuer registers at a glance.
     game.poseFarmer(1.15);
     game.poseCamera(
-      { x: -3.9, y: 3.6, z: -122.8 },
-      { x: -0.4, y: 2.0, z: -136.5 },
+      { x: -8.6, y: 2.6, z: -129.0 },
+      { x: -0.9, y: 1.8, z: -135.2 },
     );
     return;
   }

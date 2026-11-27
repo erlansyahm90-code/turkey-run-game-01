@@ -79,7 +79,7 @@ export class Hud {
     this.end.className = 'overlay on ' + kind;
     if (kind === 'caught') {
       this.endTitle.textContent = 'CAUGHT!';
-      this.endSub.textContent = `The cloche comes down on ${stats.levelName}. Dinner is served… and it is you.`;
+      this.endSub.textContent = "The cloche drops. Dinner is served — and it's you.";
     } else {
       this.endTitle.textContent = 'ESCAPED!';
       this.endSub.textContent = 'Out the kitchen window — a free bird!';
