@@ -118,15 +118,17 @@ export function buildTurkey() {
 
 /**
  * Pose the turkey for a frame.
- * opts: runPhase (radians of the run cycle), airborne (0..1), steer (-1..1), t (seconds).
+ * opts: runPhase (radians of the run cycle), airborne (0..1), steer (-1..1), t (seconds),
+ * stumble (0..1 — just took a hit: the bird dips, droops and wobbles as it recovers).
  */
 export function animateTurkey(turkey, opts) {
   const { group, wings, legs, head, tail } = turkey;
   const run = Math.sin(opts.runPhase);
   const run2 = Math.sin(opts.runPhase + Math.PI);
+  const stumble = opts.stumble ?? 0;
 
-  group.rotation.z = -opts.steer * 0.16;
-  group.rotation.x = opts.airborne > 0 ? -0.14 : Math.sin(opts.runPhase * 2) * 0.03;
+  group.rotation.z = -opts.steer * 0.16 + (stumble > 0 ? Math.sin(opts.t * 42) * 0.09 * stumble : 0);
+  group.rotation.x = (opts.airborne > 0 ? -0.14 : Math.sin(opts.runPhase * 2) * 0.03) + stumble * 0.38;
   group.position.y = opts.baseY + (opts.airborne > 0 ? 0 : Math.abs(Math.sin(opts.runPhase)) * 0.14);
 
   legs[0].rotation.x = opts.airborne > 0 ? 0.55 : run * 0.85;
@@ -135,7 +137,7 @@ export function animateTurkey(turkey, opts) {
   const flap = opts.airborne > 0 ? Math.sin(opts.t * 26) * 0.85 - 0.3 : Math.sin(opts.runPhase) * 0.12;
   for (const w of wings) w.pivot.rotation.z = w.side * (0.15 + flap * (opts.airborne > 0 ? 1 : 0.25));
 
-  head.rotation.x = Math.sin(opts.runPhase * 2) * 0.1 - (opts.airborne > 0 ? 0.25 : 0);
+  head.rotation.x = Math.sin(opts.runPhase * 2) * 0.1 - (opts.airborne > 0 ? 0.25 : 0) + stumble * 0.55;
   head.position.z = -1.5 + Math.sin(opts.runPhase * 2) * 0.07;
   tail.rotation.x = Math.sin(opts.t * 2.2) * 0.05 - (opts.airborne > 0 ? 0.25 : 0);
 }

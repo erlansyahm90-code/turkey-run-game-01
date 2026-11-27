@@ -48,6 +48,18 @@ export const HAZARDS = {
   gravySlowFactor: 0.45,      // speed multiplier while slipping through gravy
   gravySlowSecs: 1.25,
   plateRadius: 3.6,           // a serving plate left in the running lanes
+  pawEverySecs: 15,           // the cat's paw swipes in about this often (floor level)
+  pawTelegraphSecs: 1.0,      // its shadow grows for this long before the swipe
+  pawRadiusX: 5.6,            // the paw covers a wide patch of floor
+  pawRadiusZ: 4.2,
+  handFloorFactor: 1.7,       // on the floor the farmer's hand reaches less often
+  flareFirstAt: 52,           // distance of the first burner flare (counter level)
+  flareGapStart: 36,          // metres between flares early on…
+  flareGapEnd: 22,            // …and near the window
+  flareTelegraphSecs: 0.9,    // the grate glows for this long before it flares
+  flareActiveSecs: 0.75,      // how long the flame / steam jet stays up
+  flareRadius: 2.6,           // the burn zone around a flaring grate
+  levelBonus: 100,            // points for clearing a level
 };
 
 export const CAMERA = {
@@ -56,3 +68,47 @@ export const CAMERA = {
   lookAhead: 16,  // metres ahead of the turkey the camera aims at
   fov: 58,
 };
+
+// The escape is three runs in one, a location per level. Every level is built in the
+// same local frame (the turkey starts at TURKEY.startZ and runs toward -Z over a
+// surface at y = 0); the level config says how long and wide it is, what hunts the
+// turkey there, and what the finish is called. Score, corn and near-misses carry
+// across levels; hearts refill at each level start.
+export const LEVELS = [
+  {
+    id: 'table',
+    name: 'THE DINNER TABLE',
+    tag: 'LEVEL 1 · THE DINNER TABLE',
+    goal: 'REACH THE TABLE EDGE ↓',
+    length: 180,
+    halfWidth: 12.5,
+    laneHalf: 10.2,
+    bg: 0x1a0d06,
+    fog: 0x1a0d06,
+    hazards: { knife: true, fork: true, hand: true, paw: false, plates: true, flares: false, spill: 'gravy' },
+  },
+  {
+    id: 'floor',
+    name: 'THE KITCHEN FLOOR',
+    tag: 'LEVEL 2 · THE KITCHEN FLOOR',
+    goal: 'THE COOKBOOK STACK → CLIMB!',
+    length: 170,
+    halfWidth: 15,
+    laneHalf: 12.5,
+    bg: 0x120a06,
+    fog: 0x120a06,
+    hazards: { knife: false, fork: false, hand: true, paw: true, plates: false, flares: false, spill: 'water' },
+  },
+  {
+    id: 'counter',
+    name: 'THE COUNTERTOP',
+    tag: 'LEVEL 3 · THE COUNTERTOP',
+    goal: 'THE WINDOW → FREEDOM',
+    length: 170,
+    halfWidth: 13,
+    laneHalf: 10.6,
+    bg: 0x180c07,
+    fog: 0x180c07,
+    hazards: { knife: true, fork: false, hand: false, paw: false, plates: false, flares: true, spill: 'oil' },
+  },
+];

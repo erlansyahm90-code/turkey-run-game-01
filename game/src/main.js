@@ -1,14 +1,17 @@
 // Dinner Table Dash — the game itself. Owns the run's state machine (title, playing,
-// the cloche falling, the leap off the edge, both end screens), the turkey's movement,
-// the camera, scoring and lives. The world, turkey, farmer, hazards, HUD, input, audio
-// and screenshot staging each live in their own module; this file conducts them.
+// level complete, the cloche falling, the leap out of the window, both end screens),
+// the turkey's movement, the camera, scoring and lives. The escape is three levels —
+// the dinner table, the kitchen floor, the countertop — each its own world in the same
+// local frame; score and corn carry across, hearts refill at each level start. The
+// worlds, turkey, farmer, hazards, HUD, input, audio and screenshot staging each live
+// in their own module; this file conducts them.
 
 import * as THREE from 'three';
-import { TABLE, TURKEY, SCORING, CAMERA } from './config.js';
+import { TURKEY, SCORING, HAZARDS, CAMERA, LEVELS } from './config.js';
 import { makeRandom, randomSeed } from './random.js';
 import { initAudio, sfx } from './audio.js';
 import { initInput, steerInput, takePresses } from './input.js';
-import { buildWorld } from './table-world.js';
+import { buildTableWorld, buildFloorWorld, buildCounterWorld } from './table-world.js';
 import { buildTurkey, animateTurkey } from './turkey.js';
 import { buildFarmer, buildCloche } from './farmer.js';
 import { Hazards } from './hazards.js';
@@ -64,11 +67,43 @@ window.addEventListener('resize', () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
+let random = makeRandom(seedParam ?? randomSeed());
+const worlds = [
+  buildTableWorld(scene, random, {
+    edgeZ: TURKEY.startZ - LEVELS[0].length, floorY: -34, halfWidth: LEVELS[0].halfWidth,
+  }),
+  buildFloorWorld(scene, random, {
+    length: LEVELS[1].length, halfWidth: LEVELS[1].halfWidth, laneHalf: LEVELS[1].laneHalf,
+  }),
+  buildCounterWorld(scene, random, {
+    length: LEVELS[2].length, halfWidth: LEVELS[2].halfWidth,
+  }),
+];
+let activeWorld = worlds[0];
+
+const turkeyParts = buildTurkey();
+scene.add(turkeyParts.group);
+const farmer = buildFarmer();
+farmer.rotation.y = Math.PI; // face down the run, toward the turkey
+scene.add(farmer);
+const cloche = buildCloche();
+scene.add(cloche);
+const hazards = new Hazards(scene, random);
+
+const FARMER_SPOTS = [
+  (fz) => ({ x: 10, y: 0, z: fz - 52, s: 1 }),     // behind the oven, end of the table
+  (fz) => ({ x: 16, y: 0, z: fz - 20, s: 1 }),     // standing on the kitchen floor
+  (fz) => ({ x: 15, y: -20, z: fz - 26, s: 1 }),   // on the floor below the counter's end
+];
+
 const game = {
   state: 'title',
   paused: false,
   time: 0,
+  levelIndex: 0,
+  level: LEVELS[0],
   distance: 0,
+  totalDistance: 0,
   score: 0,
   lives: TURKEY.lives,
   corn: 0,
@@ -80,12 +115,21 @@ const game = {
   runPhase: 0,
   slowUntil: -1,
   invulnUntil: -1,
+  stumbleUntil: -1,
   shake: 0,
   clocheT: 0,
+  clocheRang: false,
   leapT: 0,
   hud: new Hud(),
   stats() {
-    return { distance: this.distance, corn: this.corn, nearMisses: this.nearMisses, score: Math.floor(this.score) };
+    return {
+      distance: this.totalDistance + this.distance,
+      corn: this.corn, nearMisses: this.nearMisses, score: Math.floor(this.score),
+      level: this.levelIndex + 1, levelName: this.level.name,
+    };
+  },
+  finishZ() {
+    return TURKEY.startZ - this.level.length;
   },
   poseCamera(pos, look) {
     camera.position.set(pos.x, pos.y, pos.z);
@@ -101,22 +145,27 @@ const game = {
     farmer.scale.setScalar(scale);
   },
   setSeededScene() {
-    // Screenshot scenes are staged on the seeded world built at load; nothing to reset.
+    // Screenshot scenes are staged on the seeded worlds built at load; nothing to reset.
+  },
+  /** Switch the visible world, backdrop, farmer and hazard set to a level. */
+  setWorld(i) {
+    this.levelIndex = i;
+    this.level = LEVELS[i];
+    activeWorld = worlds[i];
+    worlds.forEach((w, j) => { w.group.visible = j === i; });
+    scene.background = new THREE.Color(this.level.bg);
+    scene.fog = new THREE.Fog(this.level.fog, 55, this.level.length + 95);
+    const spot = FARMER_SPOTS[i](this.finishZ());
+    farmer.position.set(spot.x, spot.y, spot.z);
+    farmer.scale.setScalar(spot.s);
+    farmer.visible = true;
+    hazards.setLevel(this.level, i === 1 ? worlds[1].statics : []);
+    this.hud.setLevel(this.level);
   },
 };
-
-let random = makeRandom(seedParam ?? randomSeed());
-const world = buildWorld(scene, random);
-const turkeyParts = buildTurkey();
-scene.add(turkeyParts.group);
-const farmer = buildFarmer();
-farmer.rotation.y = Math.PI; // face down the table, toward the turkey
-scene.add(farmer);
-const cloche = buildCloche();
-scene.add(cloche);
-const hazards = new Hazards(scene, random);
 game.turkey = turkeyParts;
 game.hazards = hazards;
+game.worlds = worlds;
 
 initInput(canvas);
 
@@ -124,27 +173,46 @@ function turkeyPos() {
   return { x: game.turkeyX, y: game.turkeyY, z: TURKEY.startZ - game.distance };
 }
 
-function resetRun() {
-  random = makeRandom(randomSeed());
-  hazards.random = random;
-  hazards.reset();
+function stumbleAmt() {
+  return Math.max(0, (game.stumbleUntil - game.time) / 0.5);
+}
+
+function startLevel(i) {
+  if (i > 0) game.totalDistance += game.distance; // bank the finished level's metres
+  game.setWorld(i);
   game.distance = 0;
-  game.score = 0;
   game.lives = TURKEY.lives;
-  game.corn = 0;
-  game.nearMisses = 0;
   game.turkeyX = 0;
   game.turkeyY = 0;
   game.vy = 0;
   game.slowUntil = -1;
   game.invulnUntil = -1;
+  game.stumbleUntil = -1;
   game.shake = 0;
   game.paused = false;
+  game.clocheRang = false;
   cloche.visible = false;
   turkeyParts.group.visible = true;
   game.state = 'playing';
   game.hud.showHud();
-  game.hud.update(0, game.lives, 0);
+  game.hud.update(Math.floor(game.score), game.lives, 0);
+}
+
+function resetRun() {
+  random = makeRandom(randomSeed());
+  hazards.random = random;
+  game.score = 0;
+  game.corn = 0;
+  game.nearMisses = 0;
+  game.totalDistance = 0;
+  startLevel(0);
+}
+
+function completeLevel() {
+  game.score += HAZARDS.levelBonus;
+  game.state = 'leveldone';
+  sfx.fanfare();
+  game.hud.showLevelComplete(game.level, LEVELS[game.levelIndex + 1], game.stats());
 }
 
 function startCaught() {
@@ -161,18 +229,30 @@ function startLeap() {
   sfx.fanfare();
 }
 
+const HIT_FLASH = {
+  hand: 'GRABBED! −1 ♥',
+  paw: 'SCRATCHED! −1 ♥',
+  flare: 'SCORCHED! −1 ♥',
+  leg: 'BONK! −1 ♥',
+  plate: 'CLATTER! −1 ♥',
+};
+
 function applyHit(kind) {
   if (game.time < game.invulnUntil) return;
   game.lives -= 1;
   game.invulnUntil = game.time + TURKEY.invulnerableSecs;
+  game.stumbleUntil = game.time + 0.5;
   game.shake = Math.max(game.shake, 0.55);
   sfx.hurt();
+  game.hud.hitFlash();
   if (game.lives <= 0) {
     startCaught();
   } else {
-    game.hud.flash(kind === 'hand' ? 'GRABBED! −1 ♥' : 'OUCH! −1 ♥');
+    game.hud.flash(HIT_FLASH[kind] ?? 'OUCH! −1 ♥');
   }
 }
+
+const SPILL_FLASH = { gravy: 'GRAVY! SLOW…', water: 'PUDDLE! SLOW…', oil: 'OIL SLICK! SLOW…' };
 
 function handleEvents(events) {
   for (const ev of events) {
@@ -180,31 +260,39 @@ function handleEvents(events) {
       if (ev.kind === 'knife') sfx.knifeWarn();
       else if (ev.kind === 'fork') sfx.forkSweep();
       else if (ev.kind === 'hand') { sfx.handWhoosh(); game.hud.flash('✋ THE HAND!'); }
+      else if (ev.kind === 'paw') { sfx.pawWarn(); game.hud.flash('🐾 THE CAT!'); }
+      else if (ev.kind === 'flare') sfx.flareWarn();
     } else if (ev.type === 'slam') {
       if (ev.kind === 'knife') { sfx.knifeHit(); game.shake = Math.max(game.shake, 0.3); }
+      else if (ev.kind === 'paw') sfx.pawSlam();
+      else if (ev.kind === 'flare') { sfx.flare(); game.shake = Math.max(game.shake, 0.3); }
     } else if (ev.type === 'hit') {
       applyHit(ev.kind);
+    } else if (ev.type === 'bump') {
+      game.turkeyX = THREE.MathUtils.clamp(game.turkeyX + ev.dx, -game.level.laneHalf, game.level.laneHalf);
     } else if (ev.type === 'nearMiss') {
       game.nearMisses += 1;
       game.score += SCORING.nearMiss;
       sfx.nearMiss();
       game.hud.flash('CLOSE! +' + SCORING.nearMiss);
-    } else if (ev.type === 'gravy') {
-      game.slowUntil = game.time + 1.25;
-      sfx.splat();
-      game.hud.flash('GRAVY! SLOW…');
+    } else if (ev.type === 'spill') {
+      game.slowUntil = game.time + HAZARDS.gravySlowSecs;
+      if (ev.skin === 'gravy') sfx.splat(); else sfx.splash();
+      game.hud.flash(SPILL_FLASH[ev.skin] ?? 'SLOW…');
     } else if (ev.type === 'corn') {
       game.corn += 1;
       game.score += SCORING.cornKernel;
       sfx.corn();
+      game.hud.flash('+' + SCORING.cornKernel);
     }
   }
 }
 
 function updatePlaying(dt) {
-  const f = Math.min(1, game.distance / TABLE.length);
+  const level = game.level;
+  const f = Math.min(1, game.distance / level.length);
   let speed = TURKEY.baseSpeed + (TURKEY.topSpeed - TURKEY.baseSpeed) * f;
-  if (game.time < game.slowUntil) speed *= 0.45;
+  if (game.time < game.slowUntil) speed *= HAZARDS.gravySlowFactor;
   game.distance += speed * dt;
   game.score += SCORING.perMetre * speed * dt;
   game.runPhase += dt * speed * 1.5;
@@ -212,7 +300,7 @@ function updatePlaying(dt) {
   const steer = steerInput();
   game.steerVis += (steer - game.steerVis) * Math.min(1, dt * 10);
   game.turkeyX = THREE.MathUtils.clamp(
-    game.turkeyX + steer * TURKEY.steerSpeed * dt, -TABLE.laneHalf, TABLE.laneHalf);
+    game.turkeyX + steer * TURKEY.steerSpeed * dt, -level.laneHalf, level.laneHalf);
 
   const presses = takePresses();
   if (presses.has('jump') && game.turkeyY <= 0) {
@@ -232,16 +320,20 @@ function updatePlaying(dt) {
   const pos = turkeyPos();
   const events = hazards.update(dt, pos, game.distance);
   handleEvents(events);
+  if (game.state !== 'playing') return; // a hit may have ended the run mid-frame
 
   turkeyParts.group.position.set(pos.x, pos.y, pos.z);
   const invulnBlink = game.time < game.invulnUntil && Math.floor(game.time * 9) % 2 === 0;
   turkeyParts.group.visible = !invulnBlink;
   animateTurkey(turkeyParts, {
     runPhase: game.runPhase, airborne: game.turkeyY > 0.05 ? 1 : 0,
-    steer: game.steerVis, t: game.time, baseY: game.turkeyY,
+    steer: game.steerVis, t: game.time, baseY: game.turkeyY, stumble: stumbleAmt(),
   });
 
-  if (pos.z <= TABLE.edgeZ) startLeap();
+  if (game.distance >= level.length) {
+    if (game.levelIndex >= LEVELS.length - 1) startLeap();
+    else completeLevel();
+  }
   game.hud.update(Math.floor(game.score), game.lives, game.distance);
 }
 
@@ -258,9 +350,9 @@ function updateCamera(dt) {
     camera.position.y += (Math.random() - 0.5) * game.shake * 0.9;
   }
   camera.lookAt(pos.x * 0.7, 1.7, pos.z - CAMERA.lookAhead);
-  world.keyLight.position.set(pos.x + 16, 30, pos.z + 12);
-  world.keyLight.target.position.set(pos.x, 0, pos.z - 14);
-  world.keyLight.target.updateMatrixWorld();
+  activeWorld.keyLight.position.set(pos.x + 16, 30, pos.z + 12);
+  activeWorld.keyLight.target.position.set(pos.x, 0, pos.z - 14);
+  activeWorld.keyLight.target.updateMatrixWorld();
 }
 
 function updateCloche(dt) {
@@ -284,9 +376,10 @@ function updateCloche(dt) {
 
 function updateLeap(dt) {
   game.leapT += dt;
-  const p = Math.min(1, game.leapT / 1.6);
-  const z = TABLE.edgeZ - p * 15;
-  const y = Math.sin(p * Math.PI) * 7 + (TABLE.floorY + 0.2) * p * p;
+  const p = Math.min(1, game.leapT / 1.7);
+  const z0 = game.finishZ();
+  const z = z0 - p * 16;
+  const y = Math.sin(p * Math.PI) * 6 - 20 * p * p;
   turkeyParts.group.position.set(game.turkeyX * (1 - p * 0.4), y, z);
   animateTurkey(turkeyParts, {
     runPhase: game.runPhase + p * 6, airborne: 1, steer: 0, t: game.time, baseY: y,
@@ -301,6 +394,16 @@ function updateLeap(dt) {
   }
 }
 
+function updateLevelDone(dt) {
+  // The turkey catches its breath at the finish while the overlay waits for Continue.
+  const pos = turkeyPos();
+  turkeyParts.group.position.set(pos.x, 0, pos.z);
+  animateTurkey(turkeyParts, {
+    runPhase: game.runPhase + dt * 1.2, airborne: 0, steer: 0, t: game.time, baseY: 0,
+  });
+  updateCamera(dt);
+}
+
 function updateTitle(dt) {
   game.runPhase += dt * 2.2;
   turkeyParts.group.position.set(0, 0, TURKEY.startZ);
@@ -311,9 +414,9 @@ function updateTitle(dt) {
   const drift = Math.sin(game.time * 0.16) * 2.4;
   camera.position.set(drift, 4.4 + Math.sin(game.time * 0.23) * 0.5, TURKEY.startZ + 12.5);
   camera.lookAt(0, 2.4, TURKEY.startZ - 16);
-  world.keyLight.position.set(16, 30, TURKEY.startZ + 12);
-  world.keyLight.target.position.set(0, 0, TURKEY.startZ - 14);
-  world.keyLight.target.updateMatrixWorld();
+  activeWorld.keyLight.position.set(16, 30, TURKEY.startZ + 12);
+  activeWorld.keyLight.target.position.set(0, 0, TURKEY.startZ - 14);
+  activeWorld.keyLight.target.updateMatrixWorld();
 }
 
 let last = performance.now();
@@ -325,13 +428,13 @@ function frame(now) {
   game.time += dt;
 
   farmer.rotation.z = Math.sin(game.time * 0.4) * 0.012;
-  farmer.position.y = Math.sin(game.time * 0.8) * 0.35;
-  world.update(dt, game.time);
+  activeWorld.update(dt, game.time);
 
   if (game.state === 'title') updateTitle(dt);
   else if (game.state === 'playing') { if (!game.paused) updatePlaying(dt); updateCamera(dt); }
   else if (game.state === 'cloche') updateCloche(dt);
   else if (game.state === 'leaping') updateLeap(dt);
+  else if (game.state === 'leveldone') updateLevelDone(dt);
   else updateCamera(dt); // caught / escaped: hold the last framing
 
   renderer.render(scene, camera);
@@ -344,15 +447,23 @@ function startFromGesture() {
   resetRun();
 }
 
+function continueFromGesture() {
+  initAudio();
+  if (game.state === 'leveldone') startLevel(game.levelIndex + 1);
+}
+
 document.getElementById('start-btn').addEventListener('click', startFromGesture);
 document.getElementById('restart-btn').addEventListener('click', startFromGesture);
+document.getElementById('continue-btn').addEventListener('click', continueFromGesture);
 window.addEventListener('keydown', (e) => {
-  if (e.code === 'Enter' && (game.state === 'title' || game.state === 'caught' || game.state === 'escaped')) {
-    startFromGesture();
-  }
+  if (e.code !== 'Enter') return;
+  if (game.state === 'title' || game.state === 'caught' || game.state === 'escaped') startFromGesture();
+  else if (game.state === 'leveldone') continueFromGesture();
 });
 
 window.__DTD = game;
+
+game.setWorld(0);
 
 const shot = params.get('shot');
 if (shot) {
@@ -361,6 +472,8 @@ if (shot) {
   const pose = {
     title: { runPhase: 0.6, airborne: 0 },
     play: { runPhase: 1.3, airborne: 0 },
+    floor: { runPhase: 1.3, airborne: 0 },
+    counter: { runPhase: 1.6, airborne: 0 },
     caught: { runPhase: 0, airborne: 0 },
     escaped: { runPhase: 2.4, airborne: 1 },
   }[shot] ?? { runPhase: 0, airborne: 0 };
@@ -368,10 +481,10 @@ if (shot) {
     runPhase: pose.runPhase, airborne: pose.airborne, steer: 0.15, t: 1.4,
     baseY: turkeyParts.group.position.y,
   });
-  world.update(0.016, 1.4);
-  world.keyLight.position.set(turkeyParts.group.position.x + 16, 30, turkeyParts.group.position.z + 12);
-  world.keyLight.target.position.set(turkeyParts.group.position.x, 0, turkeyParts.group.position.z - 14);
-  world.keyLight.target.updateMatrixWorld();
+  activeWorld.update(0.016, 1.4);
+  activeWorld.keyLight.position.set(turkeyParts.group.position.x + 16, 30, turkeyParts.group.position.z + 12);
+  activeWorld.keyLight.target.position.set(turkeyParts.group.position.x, 0, turkeyParts.group.position.z - 14);
+  activeWorld.keyLight.target.updateMatrixWorld();
   renderer.render(scene, camera);
   renderer.render(scene, camera);
   window.__shotReady = true;

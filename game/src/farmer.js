@@ -109,6 +109,60 @@ export function setGrab(hand, amount) {
   for (const f of hand.fingers) f.rotation.x = -amount * 0.85;
 }
 
+const FUR = new THREE.MeshStandardMaterial({ color: 0xb06a28, roughness: 1 });
+const FUR_DARK = new THREE.MeshStandardMaterial({ color: 0x7a4416, roughness: 1 });
+const PAD = new THREE.MeshStandardMaterial({ color: 0xd77a86, roughness: 0.6 });
+
+/**
+ * The kitchen cat's paw: a furry forearm ending in a soft paw with toe beans. Same shape
+ * contract as buildHand ({ group, fingers }) so hazards.js can drive it with the hand's
+ * grab machine and setGrab curls its toes. It swipes in over the kitchen floor.
+ */
+export function buildPaw() {
+  const paw = new THREE.Group();
+  const forearm = new THREE.Mesh(new THREE.CylinderGeometry(2.5, 3.1, 11, 12), FUR);
+  forearm.position.set(0, 2.2, 7.5);
+  forearm.rotation.x = 0.5;
+  forearm.castShadow = true;
+  paw.add(forearm);
+  const stripes = new THREE.Mesh(new THREE.CylinderGeometry(2.62, 2.75, 1.6, 12), FUR_DARK);
+  stripes.position.set(0, 3.4, 9.6);
+  stripes.rotation.x = 0.5;
+  paw.add(stripes);
+  const foot = new THREE.Mesh(new THREE.SphereGeometry(3.4, 14, 10), FUR);
+  foot.scale.set(1.25, 0.62, 1.45);
+  foot.position.set(0, 0.4, 0);
+  foot.castShadow = true;
+  paw.add(foot);
+  const mainPad = new THREE.Mesh(new THREE.SphereGeometry(1.25, 10, 8), PAD);
+  mainPad.scale.set(1, 0.4, 1.2);
+  mainPad.position.set(0, -0.55, 0.9);
+  paw.add(mainPad);
+  const fingers = [];
+  for (const fx of [-2.9, -1, 1, 2.9]) {
+    const toe = new THREE.Group();
+    const bean = new THREE.Mesh(new THREE.SphereGeometry(0.95, 10, 8), FUR);
+    bean.scale.set(1, 0.75, 1.35);
+    bean.position.set(0, 0, -1.1);
+    bean.castShadow = true;
+    toe.add(bean);
+    const beanPad = new THREE.Mesh(new THREE.SphereGeometry(0.5, 8, 6), PAD);
+    beanPad.scale.set(1, 0.4, 1.2);
+    beanPad.position.set(0, -0.62, -1.2);
+    toe.add(beanPad);
+    const claw = new THREE.Mesh(new THREE.ConeGeometry(0.22, 1.1, 6),
+      new THREE.MeshStandardMaterial({ color: 0xf3ead8, roughness: 0.4 }));
+    claw.rotation.x = Math.PI / 2 + 0.5;
+    claw.position.set(0, -0.25, -2.6);
+    toe.add(claw);
+    toe.position.set(fx, 0.15, -3.6);
+    paw.add(toe);
+    fingers.push(toe);
+  }
+  paw.visible = false;
+  return { group: paw, fingers };
+}
+
 /** The silver serving cloche that ends a caught turkey's run. */
 export function buildCloche() {
   const cloche = new THREE.Group();

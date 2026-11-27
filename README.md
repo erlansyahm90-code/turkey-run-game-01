@@ -6,9 +6,9 @@
 
 An entry for the [make.fun](https://make.fun/bounty/turkey-run-game-01) bounty "Make the best turkey escape game" ($250 in USDC, 20 paid places).
 
-You are the main course. **Dinner Table Dash** is a 3D escape that happens on top of a set Thanksgiving dinner table: a small turkey auto-runs 254 m down a checkered tablecloth between giant plates, glasses and serving domes, while carving knives plunge from above, forks sweep the runner, gravy spills slow it down, and the farmer's hand swoops in to grab it. Get caught and a silver serving cloche slams down over you; reach the table edge and leap — you are free.
+You are the main course. **Dinner Table Dash** is a 3D escape in three levels, a location per level: a small turkey auto-runs across a set **dinner table** (checkered tablecloth, giant plates and glasses, carving knives plunging, forks sweeping, gravy spills, the farmer's hand swooping in), drops to the **kitchen floor** (giant tiles, table and chair legs in the lanes, water puddles, the kitchen cat's paw swiping, a cookbook stack to climb), and finishes along the **countertop** (hanging utensils, oven burners that flare where their grate glows, the carving knife still hunting) to the open kitchen window. Get caught on any level and a silver serving cloche slams down over you; clear the window and you are free.
 
-Steer with the arrow keys / A,D (or touch), jump with Space / W / ↑ (or tap). Three hearts, corn crumbs and near-misses score points, and both endings — caught and escaped — come with a stats screen and restart.
+Steer with the arrow keys / A,D (or touch), jump with Space / W / ↑ (or tap). Three hearts per level, corn crumbs and near-misses score points across the whole escape, and both endings — caught and escaped — come with a stats screen and restart.
 
 ## Run
 

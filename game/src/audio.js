@@ -99,6 +99,29 @@ export const sfx = {
     tone({ freq: 830, type: 'triangle', dur: 0.3, vol: 0.24 });
     noise({ dur: 0.1, vol: 0.3, low: 2000, high: 6000 });
   },
+  pawWarn() {
+    // A little two-note "mrrp": the cat has spotted the turkey.
+    tone({ freq: 740, freqEnd: 980, type: 'triangle', dur: 0.11, vol: 0.16 });
+    tone({ freq: 880, freqEnd: 620, type: 'triangle', dur: 0.14, vol: 0.14, delay: 0.1 });
+  },
+  pawSlam() {
+    noise({ dur: 0.14, vol: 0.3, low: 250, high: 1100 });
+    tone({ freq: 130, freqEnd: 55, type: 'sine', dur: 0.18, vol: 0.34 });
+  },
+  splash() {
+    noise({ dur: 0.3, vol: 0.3, low: 500, high: 2200 });
+    tone({ freq: 320, freqEnd: 90, type: 'sine', dur: 0.22, vol: 0.2 });
+  },
+  flareWarn() {
+    // A rising hiss as the burner grate heats up.
+    noise({ dur: 0.85, vol: 0.13, low: 2600, high: 6800 });
+  },
+  flare() {
+    // The burner whoomphs up: low roar under a steam hiss.
+    noise({ dur: 0.6, vol: 0.42, low: 120, high: 900 });
+    noise({ dur: 0.7, vol: 0.2, low: 2800, high: 7000, delay: 0.05 });
+    tone({ freq: 95, freqEnd: 42, type: 'triangle', dur: 0.55, vol: 0.4 });
+  },
   fanfare() {
     const notes = [523, 659, 784, 1046, 784, 1046];
     notes.forEach((freq, i) => tone({ freq, type: 'square', dur: 0.16, vol: 0.2, delay: i * 0.11 }));

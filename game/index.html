@@ -62,6 +62,16 @@
     color: #ffe9c4; text-shadow: 0 3px 0 #7a2d0d, 0 6px 14px rgba(0,0,0,0.7);
     opacity: 0; transform: scale(0.85);
   }
+  #hit-vignette {
+    position: fixed; inset: 0; pointer-events: none; opacity: 0;
+    background: radial-gradient(ellipse at center, rgba(255,30,10,0) 52%, rgba(255,30,10,0.5) 88%, rgba(200,10,0,0.72) 100%);
+  }
+  #hit-vignette.pop { animation: hitflash 0.5s ease-out; }
+  @keyframes hitflash {
+    0% { opacity: 0; }
+    15% { opacity: 1; }
+    100% { opacity: 0; }
+  }
   #hud-flash.pop { animation: flashpop 0.9s ease-out; }
   @keyframes flashpop {
     0% { opacity: 0; transform: scale(0.8); }
@@ -139,24 +149,38 @@
     <div class="hud-chip" id="hud-dist">0 m</div>
   </div>
   <div id="hud-progress-wrap">
-    <div id="hud-progress-label"><span>🍽️ THE TABLE</span><span>TABLE EDGE → FREEDOM</span></div>
+    <div id="hud-progress-label"><span id="hud-progress-left">LEVEL 1 · THE DINNER TABLE</span><span id="hud-progress-right">REACH THE TABLE EDGE ↓</span></div>
     <div id="hud-progress"><div id="hud-progress-fill"></div></div>
   </div>
   <div id="hud-flash"></div>
 </div>
 
+<div id="hit-vignette"></div>
+
 <div class="overlay on" id="title-screen">
   <div class="panel">
     <div class="game-title">DINNER TABLE<br><span class="dash">DASH</span></div>
     <div class="tagline">You are the main course. Run.</div>
-    <p class="story">Thanksgiving dinner is served — and you are it. Sprint the length of the
-      set table, past giant plates and gravy spills, while the carving knife hunts you and the
-      farmer's hand reaches in. Reach the far edge and leap… or end up under the cloche.</p>
+    <p class="story">Thanksgiving dinner is served — and you are it. Escape in three runs:
+      across the set <b>dinner table</b>, down on the <b>kitchen floor</b> under the giant
+      furniture, then along the <b>countertop</b> past the oven burners to the open window.
+      The carving knife, the farmer's hand and the kitchen cat all want you back on a plate.</p>
     <button class="big-btn" id="start-btn">▶&nbsp; START THE DASH</button>
     <div class="controls">
       <b>◀</b><b>▶</b> or <b>A</b><b>D</b> steer &nbsp;·&nbsp; <b>SPACE</b> / <b>▲</b> jump &nbsp;·&nbsp; mouse steers, click jumps<br>
-      Dodge the knife's shadow · jump the fork · gravy slows you down · grab corn for points
+      Dodge the knife's shadow · jump the fork · spills slow you down · grab corn for points
     </div>
+  </div>
+</div>
+
+<div class="overlay" id="level-screen">
+  <div class="panel">
+    <div class="end-title" id="level-title" style="color:#ffd98a">LEVEL CLEAR!</div>
+    <div class="end-sub" id="level-sub"></div>
+    <div class="end-stats" id="level-stats"></div>
+    <br>
+    <button class="big-btn" id="continue-btn">▶&nbsp; NEXT LEVEL</button>
+    <div class="controls">or press <b>ENTER</b></div>
   </div>
 </div>
 
