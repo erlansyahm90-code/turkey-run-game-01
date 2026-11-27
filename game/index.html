@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dinner Table Dash — a turkey escape game</title>
+<style>
+  :root {
+    --ink: #2b1608;
+    --paper: #fff6e8;
+    --accent: #e4572e;
+    --gold: #f2a007;
+    --leaf: #7fb069;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #1c0f08; }
+  body {
+    font-family: "Trebuchet MS", "Segoe UI", Verdana, sans-serif;
+    color: var(--paper);
+    -webkit-user-select: none; user-select: none;
+  }
+  #game-canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+
+  /* ---------- HUD ---------- */
+  #hud {
+    position: fixed; inset: 0; pointer-events: none; display: none;
+    padding: 14px 18px;
+  }
+  #hud.on { display: block; }
+  .hud-chip {
+    background: rgba(28, 13, 4, 0.72);
+    border: 2px solid rgba(255, 214, 150, 0.55);
+    border-radius: 12px;
+    padding: 6px 14px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-shadow: 0 2px 3px rgba(0,0,0,0.6);
+    white-space: nowrap;
+  }
+  #hud-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+  #hud-score { font-size: clamp(15px, 2.4vw, 24px); color: #ffd98a; }
+  #hud-lives { font-size: clamp(15px, 2.4vw, 24px); color: #ff8f7a; letter-spacing: 0.12em; }
+  #hud-dist { font-size: clamp(13px, 2vw, 19px); color: #ffe9c4; text-align: right; }
+  #hud-progress-wrap { margin: 10px auto 0; max-width: 560px; }
+  #hud-progress-label {
+    display: flex; justify-content: space-between;
+    font-size: clamp(10px, 1.5vw, 13px); font-weight: 700; letter-spacing: 0.14em;
+    color: #ffd98a; text-shadow: 0 2px 3px rgba(0,0,0,0.8); margin-bottom: 4px;
+  }
+  #hud-progress {
+    height: 12px; border-radius: 7px; overflow: hidden;
+    background: rgba(20, 10, 3, 0.75); border: 2px solid rgba(255, 214, 150, 0.5);
+  }
+  #hud-progress-fill {
+    height: 100%; width: 0%;
+    background: linear-gradient(90deg, var(--gold), var(--accent));
+    transition: width 0.15s linear;
+  }
+  #hud-flash {
+    position: absolute; left: 0; right: 0; top: 24%; text-align: center;
+    font-size: clamp(22px, 4.6vw, 44px); font-weight: 900; letter-spacing: 0.05em;
+    color: #ffe9c4; text-shadow: 0 3px 0 #7a2d0d, 0 6px 14px rgba(0,0,0,0.7);
+    opacity: 0; transform: scale(0.85);
+  }
+  #hud-flash.pop { animation: flashpop 0.9s ease-out; }
+  @keyframes flashpop {
+    0% { opacity: 0; transform: scale(0.8); }
+    18% { opacity: 1; transform: scale(1.06); }
+    30% { transform: scale(1); }
+    75% { opacity: 1; }
+    100% { opacity: 0; transform: scale(1.02); }
+  }
+
+  /* ---------- Overlays ---------- */
+  .overlay {
+    position: fixed; inset: 0; display: none;
+    align-items: center; justify-content: center; text-align: center;
+    background: radial-gradient(ellipse at center, rgba(24,10,2,0.18) 0%, rgba(24,10,2,0.66) 78%);
+    padding: 20px;
+  }
+  .overlay.on { display: flex; }
+  .panel { max-width: 680px; }
+  .game-title {
+    font-size: clamp(38px, 8.5vw, 84px); font-weight: 900; line-height: 0.98;
+    color: #ffd98a; letter-spacing: 0.01em;
+    text-shadow: 0 4px 0 #8a3b0e, 0 8px 0 rgba(90,35,5,0.55), 0 14px 30px rgba(0,0,0,0.75);
+  }
+  .game-title .dash { color: var(--accent); }
+  .tagline {
+    margin-top: 12px; font-size: clamp(15px, 2.6vw, 22px); font-weight: 700; color: #ffe9c4;
+    text-shadow: 0 2px 6px rgba(0,0,0,0.9);
+  }
+  .story {
+    margin: 14px auto 0; max-width: 520px;
+    font-size: clamp(13px, 2vw, 16px); line-height: 1.45; color: #f7e3c0;
+    text-shadow: 0 2px 5px rgba(0,0,0,0.95);
+  }
+  .big-btn {
+    pointer-events: auto; cursor: pointer; margin-top: 22px;
+    font: inherit; font-size: clamp(17px, 2.8vw, 24px); font-weight: 900; letter-spacing: 0.06em;
+    color: #fff8ea; background: linear-gradient(180deg, #f06423, #c7430f);
+    border: 3px solid #ffd98a; border-radius: 16px; padding: 12px 34px;
+    box-shadow: 0 6px 0 #7a2d0d, 0 12px 24px rgba(0,0,0,0.55);
+  }
+  .big-btn:hover { filter: brightness(1.1); }
+  .big-btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #7a2d0d; }
+  .controls {
+    margin-top: 18px; font-size: clamp(12px, 1.9vw, 15px); line-height: 1.7; color: #ffe9c4;
+    text-shadow: 0 2px 5px rgba(0,0,0,0.95);
+  }
+  .controls b {
+    background: rgba(255, 246, 232, 0.92); color: var(--ink); border-radius: 6px;
+    padding: 1px 8px; margin: 0 2px; font-weight: 900; text-shadow: none;
+    box-shadow: 0 2px 0 rgba(0,0,0,0.45);
+  }
+  .end-title {
+    font-size: clamp(36px, 8vw, 76px); font-weight: 900; line-height: 1;
+    text-shadow: 0 4px 0 rgba(70,25,0,0.8), 0 12px 28px rgba(0,0,0,0.8);
+  }
+  #end-screen.caught .end-title { color: #ff9d85; }
+  #end-screen.escaped .end-title { color: #b8ec9a; }
+  .end-sub { margin-top: 10px; font-size: clamp(15px, 2.6vw, 21px); font-weight: 700; color: #ffe9c4; text-shadow: 0 2px 6px rgba(0,0,0,0.9); }
+  .end-stats {
+    margin: 16px auto 0; display: inline-block; text-align: left;
+    background: rgba(28, 13, 4, 0.78); border: 2px solid rgba(255, 214, 150, 0.55);
+    border-radius: 14px; padding: 12px 22px;
+    font-size: clamp(14px, 2.2vw, 18px); line-height: 1.65; font-weight: 700; color: #ffe9c4;
+  }
+  .end-stats span { color: #ffd98a; float: right; margin-left: 26px; }
+</style>
+</head>
+<body>
+<canvas id="game-canvas"></canvas>
+
+<div id="hud">
+  <div id="hud-top">
+    <div class="hud-chip" id="hud-score">SCORE 0</div>
+    <div class="hud-chip" id="hud-lives">♥♥♥</div>
+    <div class="hud-chip" id="hud-dist">0 m</div>
+  </div>
+  <div id="hud-progress-wrap">
+    <div id="hud-progress-label"><span>🍽️ THE TABLE</span><span>TABLE EDGE → FREEDOM</span></div>
+    <div id="hud-progress"><div id="hud-progress-fill"></div></div>
+  </div>
+  <div id="hud-flash"></div>
+</div>
+
+<div class="overlay on" id="title-screen">
+  <div class="panel">
+    <div class="game-title">DINNER TABLE<br><span class="dash">DASH</span></div>
+    <div class="tagline">You are the main course. Run.</div>
+    <p class="story">Thanksgiving dinner is served — and you are it. Sprint the length of the
+      set table, past giant plates and gravy spills, while the carving knife hunts you and the
+      farmer's hand reaches in. Reach the far edge and leap… or end up under the cloche.</p>
+    <button class="big-btn" id="start-btn">▶&nbsp; START THE DASH</button>
+    <div class="controls">
+      <b>◀</b><b>▶</b> or <b>A</b><b>D</b> steer &nbsp;·&nbsp; <b>SPACE</b> / <b>▲</b> jump &nbsp;·&nbsp; mouse steers, click jumps<br>
+      Dodge the knife's shadow · jump the fork · gravy slows you down · grab corn for points
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="end-screen">
+  <div class="panel">
+    <div class="end-title" id="end-title">CAUGHT!</div>
+    <div class="end-sub" id="end-sub">The cloche comes down.</div>
+    <div class="end-stats" id="end-stats"></div>
+    <br>
+    <button class="big-btn" id="restart-btn">↻&nbsp; RUN AGAIN</button>
+    <div class="controls">or press <b>ENTER</b></div>
+  </div>
+</div>
+
+<script type="importmap">
+{ "imports": { "three": "./vendor/three.module.min.js" } }
+</script>
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
