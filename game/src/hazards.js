@@ -10,7 +10,7 @@
 
 import * as THREE from 'three';
 import { HAZARDS, SCORING, LEVELS } from './config.js';
-import { buildHand, buildPaw, setGrab } from './farmer.js';
+import { buildHand, buildPaw, buildCat, setGrab } from './farmer.js';
 import { range } from './random.js';
 
 const STEEL = new THREE.MeshStandardMaterial({ color: 0xe9eef4, roughness: 0.26, metalness: 0.72 });
@@ -131,7 +131,7 @@ function buildFlare() {
   // phase (deep red → orange → yellow → white-hot) so the danger reads in a still frame.
   const g = new THREE.Group();
   const grate = new THREE.Mesh(new THREE.CylinderGeometry(HAZARDS.flareRadius, HAZARDS.flareRadius * 1.08, 0.3, 20),
-    new THREE.MeshStandardMaterial({ color: 0x17130f, roughness: 0.6, metalness: 0.4 }));
+    new THREE.MeshStandardMaterial({ color: 0x33261a, roughness: 0.5, metalness: 0.4 }));
   grate.position.y = 0.15;
   grate.receiveShadow = true;
   g.add(grate);
@@ -173,7 +173,7 @@ export class Hazards {
     for (let i = 0; i < 3; i++) {
       const knife = buildKnife();
       scene.add(knife);
-      const blob = shadowBlob(HAZARDS.knifeRadius, 0.42);
+      const blob = shadowBlob(HAZARDS.knifeRadius, 0.62);
       blob.visible = false;
       scene.add(blob);
       const ring = warningRing(HAZARDS.knifeRadius + 0.5);
@@ -202,6 +202,12 @@ export class Hazards {
     this.paw.blob.visible = false;
     scene.add(this.paw.group);
     scene.add(this.paw.blob);
+    // The cat itself: it sleeps on the floor level and wakes as the turkey closes in,
+    // which primes its paw (the grabber above) for a first swipe. See updateCat.
+    const catParts = buildCat();
+    this.cat = { ...catParts, state: 'sleep', wakeP: 0, t: 0, animT: 0, x: 0, z: 0, primed: false };
+    this.cat.group.visible = false;
+    scene.add(this.cat.group);
     this.spills = [];
     for (let i = 0; i < 6; i++) {
       const spill = new THREE.Mesh(new THREE.CircleGeometry(1, 22), SPILL_MATS.gravy);
@@ -262,6 +268,18 @@ export class Hazards {
     const mat = SPILL_MATS[level.hazards.spill] ?? SPILL_MATS.gravy;
     for (const s of this.spills) s.mesh.material = mat;
     this.reset();
+    // The cat curls up beside the floor lanes, head toward the running line.
+    if (level.id === 'floor') {
+      const side = this.random() < 0.5 ? -1 : 1;
+      this.cat.x = side * (level.laneHalf - 1.1);
+      this.cat.z = -102;
+      this.cat.group.position.set(this.cat.x, 0, this.cat.z);
+      this.cat.group.rotation.y = side > 0 ? Math.PI : 0;
+      this.cat.group.visible = true;
+    } else {
+      this.cat.group.visible = false;
+    }
+    this.applyCatPose(0);
   }
 
   reset() {
@@ -279,6 +297,7 @@ export class Hazards {
     }
     for (const c of this.corns) { c.active = false; c.mesh.visible = false; }
     for (const b of this.bursts) { b.active = false; b.group.visible = false; }
+    this.cat.state = 'sleep'; this.cat.wakeP = 0; this.cat.t = 0; this.cat.primed = false;
     for (const s of this.statics) s.lastHitDist = -99;
     this.nextKnifeAt = HAZARDS.knifeFirstAt;
     this.nextSpillAt = 34;
@@ -439,6 +458,70 @@ export class Hazards {
     }
   }
 
+  /**
+   * The cat's wake cycle. It dozes until the turkey is 26 m out, then takes 0.7 s to
+   * wake — head up, ears perked, eyes open — which primes the paw timer so the first
+   * swipe follows at once, with the paw's usual 1.0 s shadow telegraph before it
+   * lands: the whole sequence is readable a full 2 s before any danger. Once the
+   * turkey is 34 m past, the cat settles back to sleep.
+   */
+  updateCat(dt, turkey) {
+    const c = this.cat;
+    const ahead = turkey.z - c.z; // positive while the turkey is still approaching
+    if (c.state === 'sleep' && ahead < 26 && ahead > 2) {
+      c.state = 'waking';
+      c.t = 0;
+    } else if (c.state === 'waking') {
+      c.t += dt;
+      if (c.t >= 0.7) {
+        c.state = 'alert';
+        if (!c.primed) {
+          c.primed = true;
+          this.pawTimer = Math.min(this.pawTimer, 0.5);
+        }
+      }
+    } else if (c.state === 'alert' && ahead < -34) {
+      c.state = 'sleep';
+    }
+    const target = c.state === 'sleep' ? 0 : 1;
+    const step = dt / 0.7;
+    c.wakeP += THREE.MathUtils.clamp(target - c.wakeP, -step, step);
+    this.applyCatPose(dt);
+  }
+
+  /** Pose the cat from its wake progress (0 = curled asleep, 1 = awake and watching). */
+  applyCatPose(dt) {
+    const c = this.cat;
+    c.animT += dt;
+    const p = c.wakeP;
+    const t = c.animT;
+    const br = 1 + Math.sin(t * 1.7) * 0.045 * (1 - p); // breathing, only while dozing
+    c.body.scale.set(1.2, 0.55 * br, 1.05);
+    c.headPivot.position.y = 1.35 + p * 0.95;           // the head lifts as it wakes
+    c.headPivot.rotation.z = 0.3 * (1 - p);             // …and untucks from the curl
+    c.earL.rotation.x = 0.55 * (1 - p);                 // ears folded flat asleep, perked awake
+    c.earR.rotation.x = -0.55 * (1 - p);
+    const eyeS = 0.15 + 0.85 * p;                       // slit eyes open
+    c.eyeL.scale.set(1, eyeS, 1);
+    c.eyeR.scale.set(1, eyeS, 1);
+    c.tail.rotation.y = Math.sin(t * (1.2 + p * 5.5)) * (0.05 + p * 0.16); // sway → lash
+    for (let i = 0; i < c.zzz.length; i++) {
+      const m = c.zzz[i];
+      const ph = (t * 0.45 + i / c.zzz.length) % 1;
+      m.position.set(3.4 + ph * 1.6, 3.6 + ph * 2.6, 1.6 - ph * 0.7);
+      m.material.opacity = (1 - p) * 0.75 * Math.sin(ph * Math.PI);
+      m.scale.setScalar(0.7 + ph * 0.9);
+    }
+  }
+
+  /** Screenshot staging: snap the cat awake mid-watch. */
+  wakeCatNow() {
+    this.cat.state = 'alert';
+    this.cat.wakeP = 1;
+    this.cat.primed = true;
+    this.applyCatPose(0);
+  }
+
   update(dt, turkey, distance) {
     const events = [];
     const r = this.random;
@@ -527,6 +610,7 @@ export class Hazards {
     // --- the farmer's hand and the cat's paw ---------------------------------------
     this.updateGrabber(this.hand, dt, turkey, events);
     this.updateGrabber(this.paw, dt, turkey, events);
+    if (hz.paw) this.updateCat(dt, turkey);
 
     // --- burner flares ----------------------------------------------------------------
     for (const fl of this.flares) {

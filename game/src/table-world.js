@@ -644,12 +644,12 @@ export function buildCounterWorld(scene, random, GEOM = { length: 170, halfWidth
   scene.add(group);
   const finishZ = -6 - GEOM.length;
 
-  const hemi = new THREE.HemisphereLight(0xd8e6ff, 0x3a2410, 0.75);
+  const hemi = new THREE.HemisphereLight(0xd8e6ff, 0x3a2410, 1.15);
   group.add(hemi);
-  const fill = new THREE.DirectionalLight(0xffe2b8, 0.5);
+  const fill = new THREE.DirectionalLight(0xffe2b8, 0.7);
   fill.position.set(18, 22, 30);
   group.add(fill);
-  const key = new THREE.DirectionalLight(0xfff0cd, 2.2);
+  const key = new THREE.DirectionalLight(0xfff0cd, 2.6);
   key.castShadow = true;
   key.shadow.mapSize.set(2048, 2048);
   key.shadow.camera.left = -34; key.shadow.camera.right = 34;
@@ -684,7 +684,7 @@ export function buildCounterWorld(scene, random, GEOM = { length: 170, halfWidth
   // ---- The window: open, bright, the way out ----------------------------------
   const winGroup = new THREE.Group();
   const pane = new THREE.Mesh(new THREE.PlaneGeometry(17, 21),
-    new THREE.MeshStandardMaterial({ color: 0xcfe4ff, emissive: 0xbfd9ff, emissiveIntensity: 1.35 }));
+    new THREE.MeshStandardMaterial({ color: 0xcfe4ff, emissive: 0xbfd9ff, emissiveIntensity: 2.1 }));
   winGroup.add(pane);
   const frameMat = new THREE.MeshStandardMaterial({ color: 0xf1e8d6, roughness: 0.6 });
   for (const [w, h, x, y] of [[19, 1.6, 0, 11.2], [19, 1.6, 0, -11.2], [1.6, 24, -9.2, 0], [1.6, 24, 9.2, 0], [17, 1.1, 0, 0], [1.1, 21, 0, 0]]) {
@@ -712,7 +712,7 @@ export function buildCounterWorld(scene, random, GEOM = { length: 170, halfWidth
   }
   winGroup.position.set(0, 13.5, finishZ - 13);
   group.add(winGroup);
-  const windowLight = new THREE.PointLight(0xd8e8ff, 380, 120, 1.7);
+  const windowLight = new THREE.PointLight(0xd8e8ff, 520, 120, 1.7);
   windowLight.position.set(0, 13, finishZ - 4);
   group.add(windowLight);
 
@@ -793,7 +793,7 @@ export function buildCounterWorld(scene, random, GEOM = { length: 170, halfWidth
     update(dt, t) {
       for (const s of swayers) s.pivot.rotation.x = Math.sin(t * 1.25 + s.phase) * 0.07;
       ovenGlow.material.emissiveIntensity = 1.55 + Math.sin(t * 2.2) * 0.16 + Math.sin(t * 7.7) * 0.06;
-      windowLight.intensity = 370 + Math.sin(t * 1.7) * 30;
+      windowLight.intensity = 505 + Math.sin(t * 1.7) * 40;
     },
   };
 }

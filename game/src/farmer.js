@@ -163,6 +163,96 @@ export function buildPaw() {
   return { group: paw, fingers };
 }
 
+/**
+ * The kitchen cat itself, curled asleep on the floor tiles with its tail wrapped
+ * round: a round body, a tucked head with folded ears and slit eyes, one front paw
+ * stretched out, and three pale sleep-puffs drifting up. Built facing +x (the head
+ * end); hazards.js turns it toward the lane, wakes it as the turkey closes in, and
+ * animates the pose handles returned here (breathing, head lift, ear perk, eye
+ * slits opening, tail sway/lash, sleep puffs).
+ */
+export function buildCat() {
+  const cat = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.SphereGeometry(3.1, 18, 12), FUR);
+  body.scale.set(1.2, 0.55, 1.05);
+  body.position.y = 1.55;
+  body.castShadow = true;
+  cat.add(body);
+  const haunch = new THREE.Mesh(new THREE.SphereGeometry(2.2, 14, 10), FUR_DARK);
+  haunch.scale.set(1, 0.72, 1);
+  haunch.position.set(-2.2, 1.35, -0.9);
+  cat.add(haunch);
+
+  const headPivot = new THREE.Group();
+  headPivot.position.set(2.9, 1.35, 1.6);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(1.65, 16, 12), FUR);
+  head.castShadow = true;
+  headPivot.add(head);
+  const muzzle = new THREE.Mesh(new THREE.SphereGeometry(0.72, 10, 8),
+    new THREE.MeshStandardMaterial({ color: 0xe8d9c0, roughness: 0.9 }));
+  muzzle.scale.set(0.75, 0.6, 1.15);
+  muzzle.position.set(1.35, -0.35, 0);
+  headPivot.add(muzzle);
+  const nose = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.2, 0.42), PAD);
+  nose.position.set(1.95, -0.12, 0);
+  headPivot.add(nose);
+  const earGeo = new THREE.ConeGeometry(0.62, 1.25, 8);
+  const earL = new THREE.Group();
+  const earLMesh = new THREE.Mesh(earGeo, FUR);
+  earLMesh.position.y = 0.55;
+  earLMesh.castShadow = true;
+  earL.add(earLMesh);
+  earL.position.set(0.05, 1.35, 0.88);
+  headPivot.add(earL);
+  const earR = new THREE.Group();
+  const earRMesh = new THREE.Mesh(earGeo, FUR);
+  earRMesh.position.y = 0.55;
+  earRMesh.castShadow = true;
+  earR.add(earRMesh);
+  earR.position.set(0.05, 1.35, -0.88);
+  headPivot.add(earR);
+  const eyeGeo = new THREE.SphereGeometry(0.17, 8, 8);
+  const eyeMat = new THREE.MeshStandardMaterial({ color: 0x201105, roughness: 0.3 });
+  const eyeL = new THREE.Mesh(eyeGeo, eyeMat);
+  eyeL.position.set(1.48, 0.3, 0.62);
+  headPivot.add(eyeL);
+  const eyeR = new THREE.Mesh(eyeGeo, eyeMat);
+  eyeR.position.set(1.48, 0.3, -0.62);
+  headPivot.add(eyeR);
+  cat.add(headPivot);
+
+  // One front paw stretched out in front of the chin, toe beans up.
+  const frontPaw = new THREE.Mesh(new THREE.SphereGeometry(1.05, 12, 8), FUR);
+  frontPaw.scale.set(1.7, 0.42, 0.72);
+  frontPaw.position.set(4.6, 0.5, 1.7);
+  frontPaw.castShadow = true;
+  cat.add(frontPaw);
+
+  // The tail wraps around the curl; its pivot yaws it for the asleep sway / awake lash.
+  const tail = new THREE.Group();
+  const tailMesh = new THREE.Mesh(new THREE.TorusGeometry(3.35, 0.5, 8, 22, 3.9), FUR);
+  tailMesh.rotation.x = Math.PI / 2;
+  tailMesh.rotation.z = 0.6;
+  tailMesh.castShadow = true;
+  tail.add(tailMesh);
+  const tailTip = new THREE.Mesh(new THREE.SphereGeometry(0.62, 8, 8), FUR_DARK);
+  tailTip.position.set(2.2, 0.1, 2.9);
+  tail.add(tailTip);
+  tail.position.y = 0.55;
+  cat.add(tail);
+
+  // Sleep puffs: pale motes that rise, swell and fade over the head while it dozes.
+  const zzz = [];
+  for (let i = 0; i < 3; i++) {
+    const puff = new THREE.Mesh(new THREE.SphereGeometry(0.4, 8, 6),
+      new THREE.MeshBasicMaterial({ color: 0xdfe9ff, transparent: true, opacity: 0, depthWrite: false }));
+    cat.add(puff);
+    zzz.push(puff);
+  }
+  cat.visible = false;
+  return { group: cat, body, headPivot, earL, earR, eyeL, eyeR, tail, zzz };
+}
+
 /** The silver serving cloche that ends a caught turkey's run. */
 export function buildCloche() {
   const cloche = new THREE.Group();
