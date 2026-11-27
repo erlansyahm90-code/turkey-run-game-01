@@ -76,16 +76,16 @@ export function stageShot(name, game) {
     knife.blob.visible = true;
     knife.ring.position.set(-4.6, 0.26, -137.2);
     knife.ring.visible = true;
-    // The farmer's hand sweeps in at the right edge at cloth height — palm out
-    // of frame, fingers descending at the edge with the grab curl on, tips
-    // staggered like fingertips. (Centred and seen from above, the hand's flat
-    // faces filled half the frame as a wall of boards; at the edge it reads
-    // as what it is and leaves the bird alone.)
+    // The farmer's hand swoops in from the top right, pitched down so the
+    // camera sees the palm's underside and the fingers curling down toward
+    // the bird — a grabbing hand, not the edge-on stack of boards the old
+    // cloth-height, level placement rendered as. The cuff exits the frame's
+    // top right corner; the bird keeps the centre.
     const hand = hazards.hand;
-    hand.group.position.set(16.0, 3.4, -130.5);
-    hand.group.rotation.set(0.05, 1.5, 0.0);
+    hand.group.position.set(17.0, 9.2, -136.5);
+    hand.group.rotation.set(-0.85, 0.9, 0.15);
     hand.group.visible = true;
-    setGrab(hand, 0.75);
+    setGrab(hand, 0.85);
     let placed = 0;
     for (const c of hazards.corns) {
       if (placed >= 5) break;
@@ -106,6 +106,7 @@ export function stageShot(name, game) {
     const flashEl = document.getElementById('hud-flash');
     flashEl.style.animation = 'none'; // pin the pop at full strength for the still
     flashEl.style.opacity = '1';
+    flashEl.style.transform = 'scale(1)'; // …and at full size, not the resting 0.85
     // The farmer looms in the back so the pursuer registers at a glance.
     game.poseFarmer(1.15);
     game.poseCamera(
@@ -116,9 +117,10 @@ export function stageShot(name, game) {
   }
 
   if (name === 'floor') {
-    // Level 2: under the table on the giant tiles — the kitchen cat AWAKE at the
-    // lane's left edge watching the turkey, its paw mid-swipe, a water puddle
-    // gleaming ahead, chair and table legs standing in the lanes.
+    // Level 2: under the table on the giant tiles — the kitchen cat caught
+    // MID-WAKE at the lane's left edge (ears mid-twitch, eyes blinking open,
+    // tail flickering — waking, not asleep), its paw mid-swipe, a water
+    // puddle gleaming ahead, chair and table legs standing in the lanes.
     game.setWorld(1);
     game.state = 'playing';
     game.hud.showHud();
@@ -130,9 +132,9 @@ export function stageShot(name, game) {
     turkey.group.position.set(-1.0, 0, -101);
     const cat = hazards.cat;
     cat.group.position.set(-11.2, 0, -112);
-    cat.group.rotation.y = 0; // built facing +x: the head end watches the lane
+    cat.group.rotation.y = -0.35; // head end angled a touch toward the camera
     cat.group.visible = true;
-    hazards.wakeCatNow();
+    hazards.poseCatWaking(0.6, 1.35);
     const paw = hazards.paw;
     paw.phase = 'slam';
     paw.x = -4.8; paw.z = -109;

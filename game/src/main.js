@@ -261,8 +261,9 @@ function startLevel(i) {
   game.state = 'playing';
   game.hud.showHud();
   game.hud.update(Math.floor(game.score), game.lives, 0);
-  // The countertop sits in bright window light; the other levels keep the base exposure.
-  renderer.toneMappingExposure = i === 2 ? 1.3 : 1.12;
+  // The countertop sits in bright window light and the dinner table is lifted a
+  // touch over base; the kitchen floor keeps the base exposure.
+  renderer.toneMappingExposure = i === 2 ? 1.3 : i === 0 ? 1.26 : 1.12;
 }
 
 function resetRun() {
@@ -573,7 +574,7 @@ const shot = params.get('shot');
 if (shot) {
   stageShot(shot, game);
   // Stills get the same per-level exposure a live run would (see startLevel).
-  renderer.toneMappingExposure = game.levelIndex === 2 ? 1.3 : 1.12;
+  renderer.toneMappingExposure = game.levelIndex === 2 ? 1.3 : game.levelIndex === 0 ? 1.26 : 1.12;
   // Pose the bird for the still, settle the world one tick, then paint twice.
   const pose = {
     title: { runPhase: 0.6, airborne: 0 },

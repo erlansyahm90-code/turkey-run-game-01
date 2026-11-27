@@ -201,9 +201,9 @@ export function buildTableWorld(scene, random, GEOM = { edgeZ: -186, floorY: -34
   scene.background = new THREE.Color(0x1a0d06);
   scene.fog = new THREE.Fog(0x1a0d06, 70, 265);
 
-  const hemi = new THREE.HemisphereLight(0xffd9a6, 0x40200e, 0.8);
+  const hemi = new THREE.HemisphereLight(0xffd9a6, 0x40200e, 1.05);
   group.add(hemi);
-  const fill = new THREE.DirectionalLight(0xffc9a0, 0.55);
+  const fill = new THREE.DirectionalLight(0xffc9a0, 0.7);
   fill.position.set(-14, 20, 30);
   group.add(fill);
   const key = new THREE.DirectionalLight(0xffe3b3, 2.4);
@@ -684,7 +684,7 @@ export function buildCounterWorld(scene, random, GEOM = { length: 170, halfWidth
   // ---- The window: open, bright, the way out ----------------------------------
   const winGroup = new THREE.Group();
   const pane = new THREE.Mesh(new THREE.PlaneGeometry(17, 21),
-    new THREE.MeshStandardMaterial({ color: 0xcfe4ff, emissive: 0xbfd9ff, emissiveIntensity: 2.1 }));
+    new THREE.MeshStandardMaterial({ color: 0xcfe4ff, emissive: 0xbfd9ff, emissiveIntensity: 3.4 }));
   winGroup.add(pane);
   const frameMat = new THREE.MeshStandardMaterial({ color: 0xf1e8d6, roughness: 0.6 });
   for (const [w, h, x, y] of [[19, 1.6, 0, 11.2], [19, 1.6, 0, -11.2], [1.6, 24, -9.2, 0], [1.6, 24, 9.2, 0], [17, 1.1, 0, 0], [1.1, 21, 0, 0]]) {
@@ -712,7 +712,7 @@ export function buildCounterWorld(scene, random, GEOM = { length: 170, halfWidth
   }
   winGroup.position.set(0, 13.5, finishZ - 13);
   group.add(winGroup);
-  const windowLight = new THREE.PointLight(0xd8e8ff, 520, 120, 1.7);
+  const windowLight = new THREE.PointLight(0xd8e8ff, 950, 150, 1.7);
   windowLight.position.set(0, 13, finishZ - 4);
   group.add(windowLight);
 
@@ -793,7 +793,7 @@ export function buildCounterWorld(scene, random, GEOM = { length: 170, halfWidth
     update(dt, t) {
       for (const s of swayers) s.pivot.rotation.x = Math.sin(t * 1.25 + s.phase) * 0.07;
       ovenGlow.material.emissiveIntensity = 1.55 + Math.sin(t * 2.2) * 0.16 + Math.sin(t * 7.7) * 0.06;
-      windowLight.intensity = 505 + Math.sin(t * 1.7) * 40;
+      windowLight.intensity = 920 + Math.sin(t * 1.7) * 70;
     },
   };
 }

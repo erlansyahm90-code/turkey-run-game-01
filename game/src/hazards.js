@@ -499,12 +499,22 @@ export class Hazards {
     c.body.scale.set(1.2, 0.55 * br, 1.05);
     c.headPivot.position.y = 1.35 + p * 0.95;           // the head lifts as it wakes
     c.headPivot.rotation.z = 0.3 * (1 - p);             // …and untucks from the curl
-    c.earL.rotation.x = 0.55 * (1 - p);                 // ears folded flat asleep, perked awake
-    c.earR.rotation.x = -0.55 * (1 - p);
-    const eyeS = 0.15 + 0.85 * p;                       // slit eyes open
-    c.eyeL.scale.set(1, eyeS, 1);
-    c.eyeR.scale.set(1, eyeS, 1);
-    c.tail.rotation.y = Math.sin(t * (1.2 + p * 5.5)) * (0.05 + p * 0.16); // sway → lash
+    // Waking cues, strongest mid-wake: the ears twitch out of their fold one at
+    // a time, the head gives a little shake, the eyes blink open in stages and
+    // the tail flickers — so the 0.7 s wake reads as WAKING, not as a cat still
+    // asleep with its head up. All of it fades out by the time it is alert.
+    const waking = c.state === 'waking' ? 1 : 0;
+    const env = waking * Math.sin(Math.PI * Math.min(1, Math.max(0, p)));
+    c.headPivot.rotation.y = Math.sin(t * 34) * 0.07 * env;
+    c.earL.rotation.x = 0.55 * (1 - p) + Math.sin(t * 46) * 0.22 * env;  // folded asleep, perked awake…
+    c.earR.rotation.x = -0.55 * (1 - p) + Math.sin(t * 46 + 2.1) * 0.18 * env;
+    c.earL.rotation.z = Math.sin(t * 39) * 0.1 * env;                    // …twitching as they unfold
+    const blink = waking * Math.max(0, Math.sin(p * Math.PI * 2.5)) * 0.5 * (1 - p);
+    const eyeS = THREE.MathUtils.clamp(0.15 + 0.85 * p - blink, 0.08, 1); // slit eyes blink open
+    c.eyeL.scale.set(1 + 0.25 * p, eyeS, 1);
+    c.eyeR.scale.set(1 + 0.25 * p, eyeS, 1);
+    c.tail.rotation.y = Math.sin(t * (1.2 + p * 5.5)) * (0.05 + p * 0.16) // sway → lash…
+      + Math.sin(t * 31) * 0.15 * env;                                  // …with a fast flicker mid-wake
     for (let i = 0; i < c.zzz.length; i++) {
       const m = c.zzz[i];
       const ph = (t * 0.45 + i / c.zzz.length) % 1;
@@ -519,6 +529,16 @@ export class Hazards {
     this.cat.state = 'alert';
     this.cat.wakeP = 1;
     this.cat.primed = true;
+    this.applyCatPose(0);
+  }
+
+  /** Screenshot staging: freeze the cat mid-wake at wake progress p, phase t,
+   *  so the still shows the waking cues (ears mid-twitch, eyes blinking open,
+   *  tail mid-flicker) instead of the curled-asleep loaf. */
+  poseCatWaking(p, t) {
+    this.cat.state = 'waking';
+    this.cat.wakeP = p;
+    this.cat.animT = t;
     this.applyCatPose(0);
   }
 

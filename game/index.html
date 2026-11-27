@@ -79,7 +79,7 @@
   }
   #hud-flash {
     position: absolute; left: 0; right: 0; top: 24%; text-align: center;
-    font-size: clamp(22px, 4.6vw, 44px); font-weight: 900; letter-spacing: 0.05em;
+    font-size: clamp(30px, 6.2vw, 60px); font-weight: 900; letter-spacing: 0.05em;
     color: #ffe9c4; text-shadow: 0 3px 0 #7a2d0d, 0 6px 14px rgba(0,0,0,0.7);
     opacity: 0; transform: scale(0.85);
   }
@@ -93,12 +93,12 @@
     15% { opacity: 1; }
     100% { opacity: 0; }
   }
-  #hud-flash.pop { animation: flashpop 0.9s ease-out; }
+  #hud-flash.pop { animation: flashpop 1.4s ease-out; }
   @keyframes flashpop {
     0% { opacity: 0; transform: scale(0.8); }
-    18% { opacity: 1; transform: scale(1.06); }
-    30% { transform: scale(1); }
-    75% { opacity: 1; }
+    14% { opacity: 1; transform: scale(1.08); }
+    22% { transform: scale(1); }
+    78% { opacity: 1; }
     100% { opacity: 0; transform: scale(1.02); }
   }
 
@@ -158,6 +158,12 @@
     font-size: clamp(14px, 2.2vw, 18px); line-height: 1.65; font-weight: 700; color: #ffe9c4;
   }
   .end-stats span { color: #ffd98a; float: right; margin-left: 26px; }
+  /* On the escaped screen the window behind is the picture: the stats shrink back. */
+  #end-screen.escaped .end-stats {
+    font-size: clamp(12px, 1.8vw, 15px);
+    padding: 9px 18px; line-height: 1.5; margin-top: 12px;
+  }
+  #end-screen.escaped .end-stats span { margin-left: 20px; }
 </style>
 </head>
 <body>
