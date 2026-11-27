@@ -67,37 +67,122 @@ export function buildFarmer() {
   return farmer;
 }
 
-/** The reaching hand: a palm with four fingers and a thumb, fingers spread to grab. */
+const HAND_SKIN = new THREE.MeshStandardMaterial({ color: 0xe6b47e, roughness: 0.55 });
+
+/**
+ * One finger of the reaching hand: three capsule segments chained on pivots,
+ * tapering toward a rounded tip, with a knuckle ball at each joint. The two
+ * inner joints carry a baked-in curl, so even the resting hand reads as a
+ * claw; setGrab curls the base pivot on top of that. (The old fingers were
+ * flat boxes — from any distance they read as wooden planks, not fingers.)
+ */
+function buildFinger(radius, curl) {
+  const base = new THREE.Group();
+  const knuckle = new THREE.Mesh(new THREE.SphereGeometry(radius * 1.12, 12, 10), HAND_SKIN);
+  knuckle.castShadow = true;
+  base.add(knuckle);
+  const seg1 = new THREE.Mesh(new THREE.CapsuleGeometry(radius, 1.6, 4, 10), HAND_SKIN);
+  seg1.rotation.x = Math.PI / 2;
+  seg1.position.z = -1.55;
+  seg1.castShadow = true;
+  base.add(seg1);
+  const joint2 = new THREE.Group();
+  joint2.position.z = -3.2;
+  joint2.rotation.x = -0.34 * curl;
+  base.add(joint2);
+  const knuckle2 = new THREE.Mesh(new THREE.SphereGeometry(radius * 0.98, 12, 10), HAND_SKIN);
+  knuckle2.castShadow = true;
+  joint2.add(knuckle2);
+  const seg2 = new THREE.Mesh(new THREE.CapsuleGeometry(radius * 0.88, 1.2, 4, 10), HAND_SKIN);
+  seg2.rotation.x = Math.PI / 2;
+  seg2.position.z = -1.3;
+  seg2.castShadow = true;
+  joint2.add(seg2);
+  const joint3 = new THREE.Group();
+  joint3.position.z = -2.6;
+  joint3.rotation.x = -0.48 * curl;
+  joint2.add(joint3);
+  const seg3 = new THREE.Mesh(new THREE.CapsuleGeometry(radius * 0.76, 0.9, 4, 10), HAND_SKIN);
+  seg3.rotation.x = Math.PI / 2;
+  seg3.position.z = -1.0;
+  seg3.castShadow = true;
+  joint3.add(seg3);
+  const tip = new THREE.Mesh(new THREE.SphereGeometry(radius * 0.76, 10, 8), HAND_SKIN);
+  tip.position.z = -2.05;
+  joint3.add(tip);
+  return base;
+}
+
+/**
+ * The reaching hand: a fleshy palm with four fingers and a thumb, fingers
+ * spread to grab. Every part is rounded — ellipsoid palm, capsule fingers —
+ * so the silhouette alone reads HAND, never a stack of planks. Same shape
+ * contract as before ({ group, fingers }); hazards.js drives it unchanged.
+ */
 export function buildHand() {
   const hand = new THREE.Group();
-  const palm = new THREE.Mesh(new THREE.BoxGeometry(9.5, 2.2, 10.5), SKIN);
+  // Palm: a flattened ellipsoid for the main mass, a rounded bar across the
+  // front edge for the knuckle pad the fingers root into, and the thumb
+  // mound bulging on the thumb side.
+  const palm = new THREE.Mesh(new THREE.SphereGeometry(1, 20, 14), HAND_SKIN);
+  palm.scale.set(5.0, 1.75, 5.4);
+  palm.position.z = 0.5;
   palm.castShadow = true;
   hand.add(palm);
+  const knucklePad = new THREE.Mesh(new THREE.CapsuleGeometry(1.55, 5.9, 4, 12), HAND_SKIN);
+  knucklePad.rotation.z = Math.PI / 2;
+  knucklePad.position.set(0, -0.25, -4.1);
+  knucklePad.castShadow = true;
+  hand.add(knucklePad);
+  const thenar = new THREE.Mesh(new THREE.SphereGeometry(1, 14, 10), HAND_SKIN);
+  thenar.scale.set(2.3, 1.25, 3.1);
+  thenar.position.set(-3.4, -0.5, 0.9);
+  hand.add(thenar);
   const cuff = new THREE.Mesh(new THREE.CylinderGeometry(3.6, 4.1, 5.5, 12), SHIRT);
-  cuff.position.set(0, 1.2, 8.2);
+  cuff.position.set(0, 1.2, 8.4);
   hand.add(cuff);
-  const fingerXs = [-3.6, -1.25, 1.25, 3.6];
+  // Four fingers, uneven as real ones: middle longest, pinky short and
+  // curled hardest, the outer pair splayed so daylight shows between them.
+  const fingerSpec = [
+    { x: -3.5, len: 0.94, curl: 0.9 },
+    { x: -1.18, len: 1.0, curl: 1.0 },
+    { x: 1.18, len: 0.96, curl: 1.05 },
+    { x: 3.5, len: 0.74, curl: 1.25 },
+  ];
   const fingers = [];
-  for (const fx of fingerXs) {
-    const pivot = new THREE.Group();
-    const seg = new THREE.Mesh(new THREE.BoxGeometry(1.7, 1.6, 6.4), SKIN);
-    seg.position.z = -3.2;
-    seg.castShadow = true;
-    pivot.add(seg);
-    const tip = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.4, 3.4), SKIN);
-    tip.position.set(0, -0.55, -7.4);
-    tip.rotation.x = 0.5;
-    pivot.add(tip);
-    pivot.position.set(fx, -0.4, -5);
+  for (const spec of fingerSpec) {
+    const pivot = buildFinger(0.9, spec.curl);
+    pivot.position.set(spec.x, -0.3, -4.5);
+    pivot.rotation.y = -spec.x * 0.045;
+    pivot.scale.setScalar(spec.len);
     hand.add(pivot);
     fingers.push(pivot);
   }
+  // The thumb: two fat segments rooted low on the palm's side, angled out
+  // and forward so its silhouette stands clear of the finger row.
   const thumb = new THREE.Group();
-  const thumbSeg = new THREE.Mesh(new THREE.BoxGeometry(1.7, 1.6, 5), SKIN);
-  thumbSeg.position.z = -2.4;
-  thumb.add(thumbSeg);
-  thumb.position.set(-5.4, -0.4, -0.5);
-  thumb.rotation.y = 0.7;
+  const thumbKnuckle = new THREE.Mesh(new THREE.SphereGeometry(1.05, 12, 10), HAND_SKIN);
+  thumbKnuckle.castShadow = true;
+  thumb.add(thumbKnuckle);
+  const thumbSeg1 = new THREE.Mesh(new THREE.CapsuleGeometry(0.98, 1.5, 4, 10), HAND_SKIN);
+  thumbSeg1.rotation.x = Math.PI / 2;
+  thumbSeg1.position.z = -1.4;
+  thumbSeg1.castShadow = true;
+  thumb.add(thumbSeg1);
+  const thumbJoint = new THREE.Group();
+  thumbJoint.position.z = -2.9;
+  thumbJoint.rotation.x = -0.4;
+  thumb.add(thumbJoint);
+  const thumbSeg2 = new THREE.Mesh(new THREE.CapsuleGeometry(0.84, 1.1, 4, 10), HAND_SKIN);
+  thumbSeg2.rotation.x = Math.PI / 2;
+  thumbSeg2.position.z = -1.15;
+  thumbSeg2.castShadow = true;
+  thumbJoint.add(thumbSeg2);
+  const thumbTip = new THREE.Mesh(new THREE.SphereGeometry(0.84, 10, 8), HAND_SKIN);
+  thumbTip.position.z = -2.25;
+  thumbJoint.add(thumbTip);
+  thumb.position.set(-4.85, -0.55, -0.4);
+  thumb.rotation.y = 0.8;
   hand.add(thumb);
   fingers.push(thumb);
   hand.visible = false;

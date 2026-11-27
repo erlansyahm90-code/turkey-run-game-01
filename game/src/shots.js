@@ -88,18 +88,18 @@ export function stageShot(name, game) {
     knife.blob.visible = true;
     knife.ring.position.set(-4.6, 0.26, -137.2);
     knife.ring.visible = true;
-    // The farmer's hand descends whole into the top right of the frame:
-    // pitched steeply (rotation.x ≈ -1.15) so its fingers point down at the
-    // bird and the camera sees the palm's underside with the fingers spread
-    // and curling — the whole palm and all four fingers inside the frame,
-    // only the cuff/forearm leaving by the top edge. (At the old placement,
-    // far right and nearly level, the frame's edge cropped it into a stack
-    // of abstract blocks.) The bird keeps the centre.
+    // The farmer's hand descends into the top right of the frame, pitched
+    // (rotation.x ≈ -1.08) so its fingers point down at the bird and the
+    // camera sees the palm's underside, fingers spread with daylight
+    // between them and the thumb standing clear of the row — since the
+    // hand was rebuilt round (capsule fingers, ellipsoid palm) the
+    // silhouette reads HAND at a glance, not a stack of planks. The bird
+    // keeps the centre.
     const hand = hazards.hand;
-    hand.group.position.set(14.2, 12.6, -143.5);
-    hand.group.rotation.set(-1.15, 0.35, -0.15);
+    hand.group.position.set(20.5, 14.6, -147.5);
+    hand.group.rotation.set(-1.08, 0.32, -0.24);
     hand.group.visible = true;
-    setGrab(hand, 0.5);
+    setGrab(hand, 0.38);
     let placed = 0;
     for (const c of hazards.corns) {
       if (placed >= 5) break;
